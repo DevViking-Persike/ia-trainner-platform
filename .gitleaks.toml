@@ -1,0 +1,13 @@
+title = "IA Trainner public repository policy"
+[extend]
+useDefault = true
+
+[[rules]]
+id = "connection-string-password"
+description = "Literal database password in a connection string"
+regex = '''(?i)(?:password|pwd)\s*=\s*([^;\s"'<>$}{]{8,})'''
+secretGroup = 1
+
+[[rules.allowlists]]
+regexTarget = "secret"
+regexes = ['''(?i)^(changeme|change_me|your_password|example_password|placeholder)$''']

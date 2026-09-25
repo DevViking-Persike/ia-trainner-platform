@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+while read -r local_ref local_sha remote_ref remote_sha; do
+  [[ "$local_sha" =~ ^0+$ ]] && continue
+  # Check every pushed branch/tag, including attempts to publish old private history.
+  ./scripts/security/scan-git.sh "$local_sha"
+done

@@ -1,0 +1,10 @@
+{
+  "domain": "https://your-infisical-host/api",
+  "projectId": "your-project-id",
+  "environment": "dev",
+  "paths": {
+    "backend": "/ia-trainner/backend",
+    "training": "/ia-trainner/training",
+    "embedding": "/embedding"
+  }
+}

@@ -1,0 +1,66 @@
+## VS Code
+.vscode/
+
+## macOS
+.DS_Store
+Thumbs.db
+
+## Environment
+.env
+.env.*
+!.env.example
+*.env.local
+
+## Build outputs
+publish/
+artifacts/
+/build
+
+## Secrets
+secrets/
+
+## Scripts runtime
+.pids/
+.logs/
+
+## Node / SvelteKit
+node_modules
+**/.svelte-kit/
+**/build/
+**/dist/
+**/.angular/
+/package
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
+## Tauri & Mobile
+**/src-tauri/target/
+/src-tauri/gen/apple/
+/src-tauri/gen/android/
+.tauri/
+gen/
+
+## Legado .NET (mantido temporariamente, remover quando confirmado)
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Local credentials, audits, and pre-migration untracked output
+.infisical.local.json
+.infisical.json
+.workspace-local/
+.security-reports/
+*.pem
+*.key
+*.pfx
+*.p12
+*.kubeconfig
+**/kubeconfig
+ia-trainner-v2/
+temp/
+
+__pycache__/
+*.pyc

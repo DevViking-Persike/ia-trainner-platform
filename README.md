@@ -1,0 +1,57 @@
+# IA Trainner Platform
+
+Repositório principal da plataforma de documentos, RAG e treinamento de modelos.
+
+| Componente | Tecnologia | Caminho |
+|---|---|---|
+| Frontend | Angular 22 | `apps/frontend` |
+| API e executor | .NET 10 LTS, Clean/Hexagonal e DDD | `services/backend` |
+| Treinamento | Python, Jobs Kubernetes na P7 | `services/training-python` |
+| Referências de migração | Go e autenticação .NET antiga | `legacy/backend-go`, `legacy/auth-keycloak-dotnet` |
+| Frontend anterior | SvelteKit/Tauri preservado | `legacy/frontend-svelte` |
+
+Este repositório fixa os commits dos componentes como **submódulos Git**. Os componentes permanecem privados e exigem acesso próprio. Tornar o principal público não publica seus conteúdos.
+
+## Começar
+
+```sh
+git clone https://github.com/DevViking-Persike/ia-trainner-platform.git
+cd ia-trainner-platform
+python3 scripts/workspace.py init
+python3 scripts/workspace.py check
+python3 scripts/workspace.py link-dev
+```
+
+Os checkouts reais ficam dentro do principal. `link-dev` cria atalhos por symlink ao lado dele, sem duplicar dados e sem sobrescrever diretórios existentes. Symlinks são locais; GitHub recebe gitlinks de modo `160000`. Não usar clone recursivo do legado: ele contém infraestrutura e secrets históricos privados.
+
+```sh
+cd apps/frontend
+npm ci
+npm start
+
+# Em outro terminal, a partir da raiz:
+dotnet run --project services/backend/src/IATrainner.Api
+```
+
+O frontend atual é a base Angular com página de migração. A API oferece `/healthz` e `/api/platform` protegido; sem ZITADEL configurado, não aceita acesso autenticado. As telas, integrações, persistência, outbox/Kafka e execução de treinamento ainda precisam ser migradas. O Worker é uma base de processo, sem consumidor Kafka habilitado. Não confundir esta reorganização com a migração funcional completa.
+
+## Configuração e segredos
+
+Copie `config/infisical.example.json` para `.infisical.local.json`, configure apenas localização/ambiente e autentique com `infisical login`. Esse arquivo local é ignorado. Valores vêm do Infisical somente durante a execução:
+
+```sh
+python3 scripts/with-infisical.py backend -- dotnet run --project services/backend/src/IATrainner.Api
+python3 scripts/with-infisical.py training -- finetuning train --list-models
+```
+
+Cada processo recebe seu escopo. O Angular e os clientes nativos nunca recebem chaves Gemini, senhas de bancos ou tokens administrativos. As pastas de backend/treinamento precisam ser configuradas; nenhum segredo administrativo é copiado automaticamente da raiz do projeto Infisical.
+
+## Entrega
+
+GitHub Actions valida os componentes e segue a referência `site-persike-svelte`: imagem OCI → Zot com digest → branch `gitops` → Argo CD → verificação da release. Credenciais de publicação são obtidas do Infisical por OIDC, sem valores no repositório ou nos build args. Publicação permanece desativada até configurar identidade, registry, manifests e rota de verificação. Python publica uma imagem de Job; CI nunca inicia treino.
+
+Veja [arquitetura atual](docs/architecture/platform.md), [configuração de entrega](docs/operations/delivery.md) e [política de segurança](SECURITY.md).
+
+## Histórico da migração
+
+O principal público começa com um snapshot limpo. O repositório anterior `workflows-ia-trainner` continua privado porque seu histórico contém uma credencial antiga. Nenhum histórico remoto foi reescrito. As referências privadas locais são apenas para recuperação: não executar `git push --all` ou `--mirror`.

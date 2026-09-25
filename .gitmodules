@@ -1,0 +1,15 @@
+[submodule "ia-trainner-frontend-angular"]
+	path = apps/frontend
+	url = https://github.com/DevViking-Persike/ia-trainner-frontend-angular.git
+[submodule "ia-trainner-backend-dotnet"]
+	path = services/backend
+	url = https://github.com/DevViking-Persike/ia-trainner-backend-dotnet.git
+[submodule "estudos-finetuning-py"]
+	path = services/training-python
+	url = https://github.com/DevViking-Persike/estudos-finetuning-py.git
+[submodule "ia-trainner-microservice-go"]
+	path = legacy/backend-go
+	url = https://github.com/DevViking-Persike/ia-trainner-microservice-go.git
+[submodule "ia-trainner-microservice-keycloak-dotnet"]
+	path = legacy/auth-keycloak-dotnet
+	url = https://github.com/DevViking-Persike/ia-trainner-microservice-keycloak-dotnet.git
