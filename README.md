@@ -37,7 +37,7 @@ npm start
 dotnet run --project services/backend/src/IATrainner.Api
 ```
 
-O marco M1 (acesso) entrega login ZITADEL com PKCE, área interna em `/app` e API .NET na mesma origem: `/api/healthz` público, `/api/me` e `/api/platform` exigem token do projeto ZITADEL "IA Trainner" com a função `user`. Sem configuração ZITADEL, a API não aceita acesso autenticado. Documentos, RAG, persistência, outbox/Kafka e treinamento ainda precisam ser implementados; o Worker não tem consumidor Kafka. Progresso por marco em [development-status](docs/operations/development-status.md).
+O marco M1 (acesso) entrega telas próprias de login (com TOTP), cadastro e recuperação de senha, sessão por cookie mantida pela API .NET (BFF sobre o ZITADEL), área interna em `/app` e API na mesma origem: `/api/healthz` público, `/api/me` e `/api/platform` exigem token do projeto ZITADEL "IA Trainner" com a função `user`. Sem configuração ZITADEL, a API não aceita acesso autenticado. Documentos, RAG, persistência, outbox/Kafka e treinamento ainda precisam ser implementados; o Worker não tem consumidor Kafka. Progresso por marco em [development-status](docs/operations/development-status.md).
 
 ## Configuração e segredos
 
