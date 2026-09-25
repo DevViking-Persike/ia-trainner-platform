@@ -48,3 +48,11 @@ Não foi criada aplicação OIDC **de usuário no ZITADEL** nem escolhido audien
 Python publica uma imagem e um ConfigMap contendo seu digest para futura seleção pelo executor. O pipeline não aplica Job de treinamento nem reserva GPU. O treinamento real exige avaliação de CUDA, bibliotecas, dataset e memória na P7; build/testes CPU não certificam isso.
 
 Os scripts de publicação mantêm a branch gitops exclusiva da aplicação. Não apontar infraestrutura compartilhada para essa branch. Rollback publica novamente o digest aprovado anterior.
+
+## Primeira publicação verificada — 25/09/2026
+
+[GitHub Actions 36097976395](https://github.com/DevViking-Persike/ia-trainner-frontend-angular/actions/runs/36097976395) concluiu CI, publicação OIDC/Zot e verificação da release com sucesso. Argo CD `ia-trainner-frontend`: `Synced/Healthy`; pod `Running/Ready` no `h6`.
+
+`https://ia-trainner.victorpersike.dev.br/healthz` retornou HTTP 200, `status=ok` e revisão `prod-3265b9268d6e27035f942309ec758c926fd63551-36097976395-1`. HTTP redireciona para HTTPS com 308; certificado público válido emitido por Let's Encrypt. A página Angular foi aberta no navegador sem erros de console.
+
+Essas verificações cobrem a publicação da base Angular, não as integrações de negócio ainda pendentes.
