@@ -24,7 +24,7 @@ Decisões estruturais: [ADR-0007](../../adrs/ADR-0007-sessao-bff-cookie.md) (ses
 - **Origem.** Tudo em `https://ia-trainner.victorpersike.dev.br/api/...`; o Traefik envia `/api` ao Service `ia-trainner-backend` sem reescrever o caminho.
 - **Autenticação.** Cookie de sessão `__Host-iat_session` do BFF no navegador, ou `Authorization: Bearer` com access token do ZITADEL para outros clientes ([auth-bff](../../architecture/auth-bff.md)). Todas as rotas destes contratos exigem a política `PlatformUser` (função `user` do projeto). O SPA nunca envia `Authorization` nem guarda tokens.
 - **CSRF.** Todo método diferente de GET/HEAD exige `X-IAT-Request: 1`; se o navegador enviar `Origin`, ele deve ser igual a `Frontend__Origin`. Falha: `403 {"error":"csrf"}`, formato herdado do M1.
-- **Isolamento.** O dono é o `sub` do ZITADEL (`owner_sub`). Toda leitura e escrita filtra por ele; recurso de outro dono responde exatamente como inexistente (404). `organization_id` é gravado para compartilhamento futuro, mas não autoriza nada no M2.
+- **Isolamento.** O dono é o `sub` do ZITADEL (`owner_sub`). Toda leitura e escrita filtra por ele; recurso de outro dono responde exatamente como inexistente (404). No Worker, o dono vem sempre da linha no banco, nunca do evento. `organization_id` é gravado para compartilhamento futuro, mas não autoriza nada no M2.
 - **JSON.** UTF-8, camelCase, enums como strings minúsculas; propriedades desconhecidas são ignoradas; corpo JSON até 64 KiB.
 - **Identificadores.** UUID v7 gerado pelo servidor, em minúsculas com hífens. Rotas com `{id}` fora desse formato não casam e respondem `404 route.not_found`.
 - **Instantes.** UTC em ISO 8601 (o .NET emite `+00:00`); o Angular exibe em `America/Sao_Paulo`.
@@ -34,12 +34,15 @@ Decisões estruturais: [ADR-0007](../../adrs/ADR-0007-sessao-bff-cookie.md) (ses
 ## Adaptações em relação ao plano
 
 1. Sessão BFF por cookie com Redis e telas próprias ([ADR-0007](../../adrs/ADR-0007-sessao-bff-cookie.md)) no lugar do bearer no navegador; CSRF por `X-IAT-Request`. O download usa `HttpClient` com o cookie, sem cabeçalho `Authorization`.
-2. Consentimento versionado por usuário para o Gemini: rotas `/api/consents/gemini` e tabela `user_consents`; upload e reprocessamento exigem consentimento vigente.
+2. Consentimento versionado por usuário para o Gemini: rotas `/api/consents/gemini` e tabela `user_consents`; upload, reprocessamento e cada envio ao Gemini (páginas de OCR e, no M3, indexação e perguntas) exigem consentimento vigente; o texto do aviso depende do nível de faturamento das chaves.
 3. Papéis `ia_trainner_migrator` e `ia_trainner_app`, pasta `postgresql/` dos repositórios SQL ([ADR-0008](../../adrs/ADR-0008-repos-sql-ddl-dml.md)); `user_consents` entra no `V0001`, preservando a reserva de `V0003` (M3) e `V0004` (M4).
 4. As tabelas filhas (`document_pages`, `document_processing_steps`) repetem `owner_sub` com chave estrangeira composta, e documento só referencia coleção do mesmo dono (defesa em profundidade no banco).
 5. Respostas 401/403/404 do framework também têm `code` estável; só a recusa CSRF e `/api/auth/*` mantêm o formato do M1.
 6. Acréscimos: `GET /api/documents/limits`, `GET /api/documents/{id}/pages/{number}`, `Documents__MaxPages`, catálogo fechado de falhas de processamento, `trigger` em `document.retry_requested`, varreduras de recuperação e de objetos órfãos no Worker.
 7. TXT e MD não têm assinatura binária: são aceitos só com extensão `.txt`, `.md` ou `.markdown` e conteúdo UTF-8.
+8. O Worker tem pasta e Secret próprios (`/ia-trainner/worker`, `ia-trainner-worker`), sem credenciais de sessão, login e e-mail; `Kafka__*` e `Gemini__*` ficam fora do Secret da API.
+9. Eventos Kafka são avisos não confiáveis (broker sem autenticação): cada handler exige o estado atual no banco e lê dono e chave do objeto da linha; `document.deletion_requested` perde `storageKey`.
+10. Preparação do banco por SQL normativo no `infra-k8s` e em todos os testes, sem `CONNECT` e `TEMPORARY` para `PUBLIC`.
 
 ## Mudanças
 

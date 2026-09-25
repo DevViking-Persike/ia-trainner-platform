@@ -78,7 +78,7 @@ Não são respostas HTTP: aparecem em `error` do documento em `failed` ([api-doc
 | `document.encrypted` | não | PDF protegido por senha | O PDF está protegido por senha. Envie uma versão sem proteção. |
 | `document.too_many_pages` | não | PDF acima de `Documents__MaxPages` | O documento passa do limite de páginas da plataforma. |
 | `document.invalid_encoding` | não | TXT ou MD que não é UTF-8 válido | O arquivo de texto precisa estar em UTF-8. |
-| `document.consent_required` | sim | consentimento ausente ou revogado quando o OCR ia começar | O OCR precisa do seu consentimento para o uso do Google Gemini. Aceite o aviso e tente novamente. |
+| `document.consent_required` | sim | consentimento ausente ou revogado antes de uma chamada de OCR, no início ou no meio do documento | O OCR precisa do seu consentimento para o uso do Google Gemini. Aceite o aviso e tente novamente. |
 | `ai.provider_unavailable` | sim | Gemini com 429, 5xx, tempo esgotado ou chaves recusadas, depois das retentativas | O serviço de OCR está indisponível no momento. Tente novamente mais tarde. |
 | `storage.unavailable` | sim | S3/RustFS indisponível depois das retentativas | O armazenamento de arquivos está indisponível. Tente novamente mais tarde. |
 | `document.processing_interrupted` | sim | processamento interrompido `Documents__MaxAttempts` vezes | O processamento foi interrompido. Tente novamente. |

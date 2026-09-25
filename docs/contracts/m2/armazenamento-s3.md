@@ -6,7 +6,7 @@ Origem: C-M2-STORAGE. Configuração em [configuracao](configuracao.md).
 |---|---|
 | Servidor | RustFS no flex4a, S3 com endereçamento path-style; acesso só do servidor (API e Worker) |
 | Buckets | `ia-trainner-documents` (M2); reservados `ia-trainner-datasets` e `ia-trainner-artifacts` (M4) |
-| Credenciais | chave de aplicação restrita aos buckets da IA Trainner, em `/ia-trainner/backend` |
+| Credenciais | chave de aplicação restrita aos buckets da IA Trainner, em `/ia-trainner/backend` e, por referência, em `/ia-trainner/worker` |
 | Bucket | privado, sem versionamento de objetos e sem object lock (a exclusão precisa ser definitiva); regra de ciclo de vida que aborta uploads multipart incompletos após 1 dia |
 
 ## Chave do original

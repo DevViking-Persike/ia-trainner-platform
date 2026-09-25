@@ -14,7 +14,7 @@ Origem: C-M2-DEPLOY. Manifests em `services/backend/deploy/kubernetes`, na mesma
 | ServiceAccount | `ia-trainner-worker`, `automountServiceAccountToken: false` até o M4 |
 | Segurança | `runAsNonRoot`, UID/GID 1654, seccomp `RuntimeDefault`, `allowPrivilegeEscalation: false`, `readOnlyRootFilesystem: true`, `capabilities.drop: [ALL]` |
 | Volumes | `/tmp` em `emptyDir` com `sizeLimit: 1Gi` (cópia do original e páginas para OCR) |
-| Configuração | `envFrom` do Secret `ia-trainner-backend` |
+| Configuração | `envFrom` do Secret `ia-trainner-worker` (pasta `/ia-trainner/worker`), nunca o Secret da API ([configuracao](configuracao.md)) |
 | Recursos (proposta, ajustar após medição) | requests `100m` / `256Mi`; limits `1` CPU / `1Gi` |
 | Saúde | porta interna `8081` (`health`): `GET /healthz` (processo vivo, sem dependências) e `GET /readyz` (configuração válida, PostgreSQL responde, consumidor Kafka conectado) |
 | Sondas | startup `/healthz` a cada 2 s, até 30 falhas; readiness `/readyz` a cada 10 s; liveness `/healthz` a cada 20 s |
@@ -40,7 +40,7 @@ spec:
           command: ["dotnet", "/app/worker/IATrainner.Worker.dll"]
           workingDir: /app/worker
           ports: [{ name: health, containerPort: 8081 }]
-          envFrom: [{ secretRef: { name: ia-trainner-backend } }]
+          envFrom: [{ secretRef: { name: ia-trainner-worker } }]
           readinessProbe: { httpGet: { path: /readyz, port: health }, periodSeconds: 10 }
           livenessProbe: { httpGet: { path: /healthz, port: health }, periodSeconds: 20 }
           volumeMounts: [{ name: tmp, mountPath: /tmp }]
@@ -60,8 +60,9 @@ spec:
 
 | Recurso | Regra |
 |---|---|
-| PostgreSQL | banco `ia_trainner`, papéis, schema e escopos do Infisical ([banco-de-dados](banco-de-dados.md)) |
-| Kafka | tópicos `ia-trainner.documents.v1` e `ia-trainner.documents.dlq.v1` criados antes do Worker ([eventos-kafka](eventos-kafka.md)) |
+| PostgreSQL | banco `ia_trainner`, papéis e schema pelo SQL de [preparação](banco-de-dados.md#preparação-do-servidor), e escopos do Infisical |
+| Infisical | pasta `/ia-trainner/worker` e InfisicalSecret `ia-trainner-worker`, no padrão do `ia-trainner-backend` (`recursive: false`), com as chaves de [configuracao](configuracao.md) |
+| Kafka | tópicos `ia-trainner.documents.v1` e `ia-trainner.documents.dlq.v1` criados antes do Worker; Kafka UI só leitura recomendado ([eventos-kafka](eventos-kafka.md#confiança)) |
 | RustFS | bucket `ia-trainner-documents` e chave de aplicação ([armazenamento-s3](armazenamento-s3.md)) |
 | Saída do Worker | PostgreSQL 5432, Kafka 9092, RustFS, `generativelanguage.googleapis.com:443`, coletor OTLP existente e DNS; nada além |
 | Saída da API | acrescenta PostgreSQL 5432 e RustFS às regras do M1 (Redis, SMTP, ZITADEL, OTLP) |

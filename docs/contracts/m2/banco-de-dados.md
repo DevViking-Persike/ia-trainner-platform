@@ -1,6 +1,6 @@
 # Esquema PostgreSQL do M2
 
-Origem: C-M2-DDL-V0001/V0002 e C-M2-DDL-DELIVERY. As migrações vivem em `database/ia-trainner-sql-ddl/postgresql/` e são aplicadas pelo Flyway ([ADR-0008](../../adrs/ADR-0008-repos-sql-ddl-dml.md)); o backend lê e escreve com o papel de runtime. O DDL abaixo é a referência do contrato: foi aplicado com Flyway 13.8 em PostgreSQL 16, 17 e 18 descartáveis, duas vezes (a segunda sem efeito), com os testes da seção [Verificação](#verificação).
+Origem: C-M2-DDL-V0001/V0002 e C-M2-DDL-DELIVERY. As migrações vivem em `database/ia-trainner-sql-ddl/postgresql/` e são aplicadas pelo Flyway ([ADR-0008](../../adrs/ADR-0008-repos-sql-ddl-dml.md)); o backend lê e escreve com o papel de runtime. A preparação do servidor e o DDL abaixo são a referência do contrato: foram aplicados com Flyway 13.8 em PostgreSQL 16, 17 e 18 descartáveis, duas vezes (a segunda sem efeito), com os testes da seção [Verificação](#verificação).
 
 ## Servidor, papéis e arquivos
 
@@ -8,13 +8,49 @@ Origem: C-M2-DDL-V0001/V0002 e C-M2-DDL-DELIVERY. As migrações vivem em `datab
 |---|---|
 | Servidor | `dados-pg-postgresql.dados.svc.cluster.local:5432`, compartilhado; nenhum servidor novo |
 | Banco e schema | `ia_trainner` e `ia_trainner` |
-| Criados pelo `infra-k8s` | banco, papéis e `CREATE SCHEMA ia_trainner AUTHORIZATION ia_trainner_migrator`; `CONNECT` só para os dois papéis; nada em `public` |
-| `ia_trainner_migrator` | dono do schema; executa DDL e dados de referência; credencial só em `/ia-trainner/sql-ddl` |
-| `ia_trainner_app` | runtime (API e Worker); só `SELECT/INSERT/UPDATE/DELETE` por privilégios padrão; sem `CREATE`, `ALTER`, `DROP`, `TRUNCATE` ou `TEMP`; credencial só em `/ia-trainner/backend` |
+| Criados pelo `infra-k8s` | banco, papéis e schema, exatamente pelo SQL de [preparação](#preparação-do-servidor) |
+| `ia_trainner_migrator` | dono do banco e do schema; executa DDL e dados de referência; credencial só em `/ia-trainner/sql-ddl` |
+| `ia_trainner_app` | runtime (API e Worker); só `CONNECT` e `SELECT/INSERT/UPDATE/DELETE` por privilégios padrão; sem `CREATE`, `ALTER`, `DROP`, `TRUNCATE` ou `TEMP`; credencial só em `/ia-trainner/backend` e, por referência, em `/ia-trainner/worker` ([configuracao](configuracao.md)) |
 | DDL do M2 | `V0001__documents_core.sql` (privilégios, `collections`, `documents`, `document_pages`, `document_processing_steps`, `user_consents`) e `V0002__outbox_inbox.sql` |
 | Reservas | `V0003` (M3, conhecimento) e `V0004` (M4, treinamento) |
 | Histórico | DDL `ia_trainner.flyway_schema_history`; DML `ia_trainner.flyway_schema_history_dml` |
 | DML do M2 | nenhum dado de referência; só o pipeline e o callback de privilégios |
+
+## Preparação do servidor
+
+Normativa e idempotente, no padrão do `init-databases` do `infra-k8s`: um administrador do servidor a executa com `psql` conectado ao banco `postgres`, com as senhas em variáveis do `psql` (`-v migrator_password=… -v app_password=…`) lidas do Infisical, nunca do Git. Todo harness de teste (os `verify.sh` dos dois repositórios SQL e o Testcontainers do backend) roda este mesmo SQL como superusuário antes das migrações. O `ia-trainner-sql-ddl` versiona a cópia de referência em `scripts/verify/infra-bootstrap.sql` e a leva na imagem DDL em `/flyway/bootstrap/infra-bootstrap.sql`, fora das `locations` do Flyway; o DML e o backend a leem da imagem fixada.
+
+```sql
+SELECT format('CREATE ROLE %I LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD %L',
+              'ia_trainner_migrator', :'migrator_password')
+WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ia_trainner_migrator')
+\gexec
+ALTER ROLE ia_trainner_migrator WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS
+  PASSWORD :'migrator_password';
+
+SELECT format('CREATE ROLE %I LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD %L',
+              'ia_trainner_app', :'app_password')
+WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ia_trainner_app')
+\gexec
+ALTER ROLE ia_trainner_app WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS
+  PASSWORD :'app_password';
+
+SELECT format('CREATE DATABASE %I OWNER %I', 'ia_trainner', 'ia_trainner_migrator')
+WHERE NOT EXISTS (SELECT 1 FROM pg_database WHERE datname = 'ia_trainner')
+\gexec
+ALTER DATABASE ia_trainner OWNER TO ia_trainner_migrator;
+REVOKE ALL ON DATABASE ia_trainner FROM PUBLIC;
+GRANT CONNECT ON DATABASE ia_trainner TO ia_trainner_migrator, ia_trainner_app;
+
+\connect ia_trainner
+REVOKE ALL ON SCHEMA public FROM PUBLIC;
+CREATE SCHEMA IF NOT EXISTS ia_trainner AUTHORIZATION ia_trainner_migrator;
+ALTER SCHEMA ia_trainner OWNER TO ia_trainner_migrator;
+```
+
+- O PostgreSQL concede `CONNECT` e `TEMPORARY` a `PUBLIC` em todo banco novo. Sem o `REVOKE ALL ON DATABASE`, o `ia_trainner_app` criaria tabelas temporárias e qualquer outro papel do servidor compartilhado conectaria ao banco.
+- Nenhum papel tem atributo administrativo, e um não é membro do outro: o `ia_trainner_app` recebe só o `CONNECT` daqui e o que o `V0001` concede.
+- O migrador é dono do banco (como cada dono de banco do `init-databases`) e do schema; o Flyway roda com `-createSchemas=false`.
 
 ## Tabelas
 
@@ -192,7 +228,7 @@ CREATE INDEX ix_inbox_processed_messages_processed_at
 
 | Operação | Forma |
 |---|---|
-| Leitura de coleção ou documento | sempre `WHERE owner_sub = @ownerSub` (mais `status <> 'deleting'` ou `status = 'active'`); a única leitura sem dono é `GetForProcessingAsync(id)` do Worker |
+| Leitura de coleção ou documento | sempre `WHERE owner_sub = @ownerSub` (mais `status <> 'deleting'` ou `status = 'active'`); as únicas leituras sem dono são as do `IDocumentWorkerStore`, exclusivo do Worker, que decide pelo estado da linha ([portas-dotnet](portas-dotnet.md)) |
 | Listagem de documentos | `ix_documents_owner_created` ou `ix_documents_owner_collection_created`, paginação por `(created_at, id)` decrescente |
 | Duplicado no upload | consulta por `(owner_sub, sha256)` e, na corrida, violação de `ux_documents_owner_sha256` (SQLSTATE 23505) |
 | Alteração de estado | `UPDATE ... SET version = version + 1 ... WHERE id = @id AND version = @expected` |
@@ -207,16 +243,18 @@ Conexão: `ConnectionStrings__Platform` com `Search Path=ia_trainner`; pool máx
 ## Entrega das migrações
 
 - Imagem por repositório (`ia-trainner-sql-ddl` e `ia-trainner-sql-dml`): `flyway/flyway` fixada por digest mais os arquivos SQL, publicada no Zot por digest.
-- Aplicação por Jobs Kubernetes como hooks PreSync da Application única `ia-trainner`: DDL na onda `-2` e DML na onda `-1`, antes de API e Worker. Credencial do migrador pelo Secret `ia-trainner-sql-ddl` (Infisical `/ia-trainner/sql-ddl`), nunca presente em `/ia-trainner/backend`.
+- Aplicação por Jobs Kubernetes como hooks PreSync da Application única `ia-trainner`: DDL na onda `-2` e DML na onda `-1`, antes de API e Worker. Credencial do migrador pelo Secret `ia-trainner-sql-ddl` (Infisical `/ia-trainner/sql-ddl`), nunca presente em `/ia-trainner/backend` nem em `/ia-trainner/worker`.
 - Parâmetros comuns: `-schemas=ia_trainner -defaultSchema=ia_trainner -createSchemas=false -cleanDisabled=true -validateMigrationNaming=true`. DDL: `-table=flyway_schema_history`. DML: `-table=flyway_schema_history_dml -baselineOnMigrate=true -baselineVersion=0`.
 - O histórico do DML nasce depois dos privilégios padrão e, sem cuidado, ficaria legível e gravável pelo `ia_trainner_app` (comprovado no teste). O repositório DML traz o callback `postgresql/afterMigrate__revoke_history.sql` com `REVOKE ALL ON TABLE ia_trainner.flyway_schema_history_dml FROM ia_trainner_app;`.
 - Os testes de integração do backend fixam a mesma imagem DDL em `services/backend/tests/IATrainner.Integration.Tests/ddl-image.txt` e a aplicam num PostgreSQL do Testcontainers.
 
 ## Verificação
 
-`scripts/verify.sh` de cada repositório SQL sobe um PostgreSQL descartável da mesma versão major do servidor compartilhado, cria papéis e schema como o `infra-k8s`, aplica as migrações duas vezes e confere, como `ia_trainner_app`:
+`scripts/verify.sh` de cada repositório SQL sobe um PostgreSQL descartável da mesma versão major do servidor compartilhado, roda como superusuário o SQL de [preparação](#preparação-do-servidor) duas vezes (a segunda sem efeito), aplica as migrações duas vezes e confere:
 
-- `CREATE`, `ALTER`, `DROP`, `TRUNCATE`, `CREATE INDEX` e tabela temporária recusados (42501); nenhum acesso às duas tabelas de histórico;
+- `PUBLIC` sem privilégio no banco, sem `USAGE` em `public` e em `ia_trainner`; nenhum dos dois papéis com atributo administrativo, e `ia_trainner_app` fora do migrador;
+- papel sem concessões, criado como os demais do servidor, recusado ao conectar (42501);
+- como `ia_trainner_app`: `CREATE` (em `ia_trainner` e em `public`), `ALTER`, `DROP`, `TRUNCATE`, `CREATE INDEX` e tabela temporária recusados (42501); nenhum acesso às duas tabelas de histórico;
 - nome de coleção repetido do mesmo dono recusado e liberado quando a coleção vai a `deleting`; mesmo nome aceito para outro dono;
 - documento de um dono em coleção de outro, página ou passo com dono divergente e coleção apagada com documentos recusados (23503);
 - `sha256` repetido do mesmo dono recusado e liberado em `deleting`; `error_*` fora de `failed`, `failed` sem erro, `page_count` zero, estados e métodos inválidos recusados (23514); texto com U+0000 recusado (22021);

@@ -94,6 +94,8 @@ public static class MediaTypeDetector { public static string? Detect(ReadOnlySpa
 
 Os agregados `Collection` e `Document` ficam no Domain (`Domain/Documents`), com as transições de [ciclo-de-vida-documento](ciclo-de-vida-documento.md), `Version` para concorrência e a normalização de nomes de [api-colecoes](api-colecoes.md).
 
+No Worker, todo `ownerSub` passado às portas (`AddPagesAsync`, `IConsentRepository`) vem da linha lida por `GetForProcessingAsync` ou `GetCollectionForDeletionAsync`, e a chave do objeto vem de `storage_key`; o envelope do evento nunca é fonte ([eventos-kafka](eventos-kafka.md#confiança)).
+
 ## Application/Consents
 
 ```csharp

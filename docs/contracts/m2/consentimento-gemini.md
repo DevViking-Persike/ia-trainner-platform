@@ -4,23 +4,36 @@ Decisão do titular em 25/09/2026: documentos podem ir ao Gemini para OCR (M2), 
 
 ## Regras
 
-- Upload e reprocessamento exigem consentimento vigente: aceite não revogado da versão atual do aviso. Sem ele, 409 `consent.required`.
-- O Worker confere de novo antes de chamar o Gemini; se o consentimento sumiu, o documento vai a `failed` com `document.consent_required` (reprocessável).
-- A exigência vale para todos os tipos, inclusive TXT, MD e PDF com camada de texto: no M3 todo documento pronto gera embeddings no Gemini.
-- Revogar bloqueia novos envios, reprocessamentos e (M3) perguntas; não apaga documentos. O que já foi enviado ao Google não pode ser recolhido; o usuário pode excluir seus documentos a qualquer momento, em definitivo.
-- Texto do aviso alterado é uma nova versão: todos precisam aceitar de novo.
+- Todo envio ao Gemini exige consentimento vigente no momento do envio: aceite não revogado da versão atual do aviso, consultado pelo `owner_sub` gravado na linha do documento, nunca pelo evento. Vale para cada chamada de OCR, inclusive retentativas, para cada lote de embeddings do M3 (indexação, reindexação e carga de documentos antigos) e para cada pergunta do M3.
+- Upload e reprocessamento também exigem consentimento vigente na API; sem ele, 409 `consent.required`.
+- Sem consentimento vigente, o OCR é interrompido antes da próxima página: o documento vai a `failed` com `document.consent_required` (reprocessável) e nenhuma página restante é enviada.
+- A exigência vale para todos os tipos, inclusive TXT, MD e PDF com camada de texto, que chegam a `ready` no M2 sem chamar o Gemini: no M3 todo documento pronto gera embeddings no Gemini. O indexador do M3 não envia documento de dono sem consentimento vigente; o documento fica com indexação `consent_required` (estado a acrescentar no contrato do M3) e volta à fila depois de um novo aceite.
+- Revogar bloqueia, a partir desse instante, todo envio novo: páginas ainda não enviadas de um OCR em andamento, indexação e perguntas. Não apaga documentos. O que já foi enviado ao Google não pode ser recolhido; o usuário pode excluir seus documentos a qualquer momento, em definitivo.
+- Texto do aviso alterado é uma nova versão: todos precisam aceitar de novo, e nada é enviado até lá.
+
+## Nível da Gemini API
+
+Os termos da Gemini API tratam o conteúdo conforme o nível da chave. No nível pago (projeto do Google Cloud com faturamento ativo), o Google não usa prompts e respostas para melhorar seus produtos e guarda registros por tempo limitado, só para detectar abuso e cumprir exigências legais. No nível gratuito, o Google usa o conteúdo para melhorar e desenvolver produtos e tecnologias de aprendizado de máquina, e revisores humanos podem lê-lo. Nos dois, o conteúdo pode ser processado ou guardado em qualquer país onde o Google tenha instalações.
+
+- Pendente do titular antes de publicar o aviso: confirmar o nível das duas chaves (`sdk-gemini-1` e `sdk-gemini-2`, ver [configuracao](configuracao.md)). O parágrafo 2 do aviso abaixo vale só se as duas forem do nível pago.
+- Se alguma chave for do nível gratuito, ela sai da configuração ou o aviso é publicado com a variante do parágrafo 2, que cobre o pior caso.
+- Trocar uma chave por outra de nível diferente do declarado no aviso exige nova versão do aviso antes da troca.
 
 ## Aviso
 
-O texto vive no backend (`IATrainner.Application`), imutável por versão; API e Worker usam a mesma versão atual, definida em código (sem configuração). O Angular exibe `title` e `paragraphs` como texto puro, sem HTML. Versão inicial `gemini-v1`, rascunho sujeito à revisão do titular antes de publicar:
+O texto vive no backend (`IATrainner.Application`), imutável por versão; API e Worker usam a mesma versão atual, definida em código (sem configuração). O Angular exibe `title` e `paragraphs` como texto puro, sem HTML. Versão inicial `gemini-v1`, rascunho para o nível pago, sujeito à revisão do titular antes de publicar:
 
 > **Uso do Google Gemini no processamento dos seus documentos**
 >
 > 1. Para ler imagens e PDFs digitalizados, a IA Trainner envia essas páginas ao Google Gemini, serviço de IA do Google. Quando as conversas sobre documentos forem liberadas, o texto dos seus documentos e as suas perguntas também serão enviados ao Gemini para indexação e respostas.
-> 2. O envio usa a conta de API da plataforma. O Google trata esse conteúdo conforme os termos da Gemini API aplicáveis a essa conta; a IA Trainner não controla esse tratamento.
+> 2. O envio usa a conta paga da plataforma na Gemini API. Nessa modalidade, o Google não usa o conteúdo enviado nem as respostas para melhorar seus produtos e guarda registros por tempo limitado, só para detectar abusos e cumprir exigências legais. O conteúdo é processado em servidores do Google que podem ficar fora do Brasil: é uma transferência internacional de dados.
 > 3. Envie apenas documentos que você pode compartilhar com terceiros. Evite dados pessoais sensíveis e material confidencial.
 > 4. Seus arquivos e o texto extraído ficam na infraestrutura da IA Trainner, isolados por conta.
-> 5. Você pode revogar este consentimento no seu perfil. A revogação bloqueia novos envios e reprocessamentos, mas não recupera o que já foi enviado ao Google. Excluir um documento o remove em definitivo da plataforma.
+> 5. Você pode revogar este consentimento no seu perfil. A partir da revogação, nada mais é enviado ao Gemini: nem as páginas que faltarem de um processamento em andamento, nem textos para indexação, nem perguntas. O que já foi enviado ao Google não pode ser recolhido. Excluir um documento o remove em definitivo da plataforma.
+
+Variante do parágrafo 2, obrigatória se alguma chave for do nível gratuito:
+
+> 2. O envio pode usar uma chave do nível gratuito da Gemini API. Nessa modalidade, o Google pode usar o conteúdo enviado e as respostas para melhorar e desenvolver seus produtos e tecnologias de aprendizado de máquina, e revisores humanos podem ler esse conteúdo. O conteúdo é processado em servidores do Google que podem ficar fora do Brasil: é uma transferência internacional de dados.
 
 Versões seguem `^[a-z0-9]+(-[a-z0-9]+)*$`, até 32 caracteres (`gemini-v1`, `gemini-v2`...).
 
@@ -71,7 +84,7 @@ Tabela `ia_trainner.user_consents` ([banco-de-dados](banco-de-dados.md)): cada a
 | `accepted_at` | timestamptz | instante do aceite |
 | `revoked_at` | timestamptz null | instante da revogação |
 
-Consulta de vigência, igual na API e no Worker:
+Consulta de vigência, igual na API e no Worker (no Worker, `@ownerSub` é o `owner_sub` da linha do documento):
 
 ```sql
 SELECT EXISTS (
