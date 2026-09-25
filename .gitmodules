@@ -15,3 +15,9 @@
 	path = legacy/auth-keycloak-dotnet
 	url = https://github.com/DevViking-Persike/ia-trainner-microservice-keycloak-dotnet.git
 	update = none
+[submodule "ia-trainner-sql-ddl"]
+	path = database/ia-trainner-sql-ddl
+	url = https://github.com/DevViking-Persike/ia-trainner-sql-ddl.git
+[submodule "ia-trainner-sql-dml"]
+	path = database/ia-trainner-sql-dml
+	url = https://github.com/DevViking-Persike/ia-trainner-sql-dml.git

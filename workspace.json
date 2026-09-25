@@ -3,6 +3,8 @@
     {"path": "apps/frontend", "repository": "ia-trainner-frontend-angular", "alias": "ia-trainner-frontend-angular", "active": true},
     {"path": "services/backend", "repository": "ia-trainner-backend-dotnet", "alias": "ia-trainner-backend-dotnet", "active": true},
     {"path": "services/training-python", "repository": "estudos-finetuning-py", "alias": "estudos-finetuning-py", "active": true},
+    {"path": "database/ia-trainner-sql-ddl", "repository": "ia-trainner-sql-ddl", "alias": "ia-trainner-sql-ddl", "active": true},
+    {"path": "database/ia-trainner-sql-dml", "repository": "ia-trainner-sql-dml", "alias": "ia-trainner-sql-dml", "active": true},
     {"path": "legacy/backend-go", "repository": "ia-trainner-microservice-go", "alias": "ia-trainner-microservice-go", "active": false},
     {"path": "legacy/auth-keycloak-dotnet", "repository": "ia-trainner-microservice-keycloak-dotnet", "alias": "ia-trainner-microservice-keycloak-dotnet", "active": false}
   ]

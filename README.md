@@ -9,6 +9,8 @@ Endereço web: **https://ia-trainner.victorpersike.dev.br**. DNS, TLS e bootstra
 | Frontend | Angular 22 | `apps/frontend` |
 | API e executor | .NET 10 LTS, Clean/Hexagonal e DDD | `services/backend` |
 | Treinamento | Python, Jobs Kubernetes na P7 | `services/training-python` |
+| Esquema do banco | SQL DDL (Flyway) | `database/ia-trainner-sql-ddl` |
+| Dados de referência | SQL DML (Flyway) | `database/ia-trainner-sql-dml` |
 | Referências de migração | Go e autenticação .NET antiga | `legacy/backend-go`, `legacy/auth-keycloak-dotnet` |
 | Frontend anterior | SvelteKit/Tauri preservado | `legacy/frontend-svelte` |
 
