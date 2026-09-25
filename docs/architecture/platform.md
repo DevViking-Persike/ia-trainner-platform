@@ -31,6 +31,7 @@ Observabilidade: OpenTelemetry nos processos .NET/Python, W3C trace context em H
 - Python existente reaproveitado; imagem CUDA e pipeline de entrega preparados. Nenhum treino GPU validado nesta reorganização.
 - Pipelines Actions para os três componentes ativos, com credenciais Infisical em runtime e manifests GitOps por digest.
 - Bootstrap do frontend criado no `infra-k8s`: namespace, pull secret e chave GitOps pelo Infisical, projeto Argo restrito, regras de rede, DNS e TLS. Publicação do Angular habilitada no GitHub Actions.
-- Adaptadores de negócio, clientes ZITADEL, scopes de backend/treinamento, integração de Gemini e migração funcional das telas continuam pendentes; a publicação inicial entrega a página Angular de migração.
+- M1 (acesso): login ZITADEL com PKCE no Angular, área interna e API .NET na mesma origem (`/api`), com validação de issuer/audience/assinatura/validade e função `user` do projeto. Configuração da API no Infisical `/ia-trainner/backend`; traces OTLP para o Jaeger existente. Estado e evidências em [development-status](../operations/development-status.md).
+- Adaptadores de negócio (documentos, RAG, treinamento), scopes de treinamento, integração de Gemini e demais telas continuam pendentes.
 
 As bases são pontos de partida verificáveis, não uma aplicação de treinamento pronta para produção.

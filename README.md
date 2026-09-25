@@ -35,7 +35,7 @@ npm start
 dotnet run --project services/backend/src/IATrainner.Api
 ```
 
-O frontend atual é a base Angular com página de migração. A API oferece `/healthz` e `/api/platform` protegido; sem ZITADEL configurado, não aceita acesso autenticado. As telas, integrações, persistência, outbox/Kafka e execução de treinamento ainda precisam ser migradas. O Worker é uma base de processo, sem consumidor Kafka habilitado. Não confundir esta reorganização com a migração funcional completa.
+O marco M1 (acesso) entrega login ZITADEL com PKCE, área interna em `/app` e API .NET na mesma origem: `/api/healthz` público, `/api/me` e `/api/platform` exigem token do projeto ZITADEL "IA Trainner" com a função `user`. Sem configuração ZITADEL, a API não aceita acesso autenticado. Documentos, RAG, persistência, outbox/Kafka e treinamento ainda precisam ser implementados; o Worker não tem consumidor Kafka. Progresso por marco em [development-status](docs/operations/development-status.md).
 
 ## Configuração e segredos
 

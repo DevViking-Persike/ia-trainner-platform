@@ -16,7 +16,7 @@ Configure variáveis de repositório/ambiente **não sensíveis** no GitHub:
 | `INFISICAL_PROJECT_SLUG` | Projeto com permissão para ler `/zot` |
 | `INFISICAL_ENVIRONMENT` | Ambiente a consultar |
 | `INFISICAL_OIDC_AUDIENCE` | Audience exata configurada na confiança OIDC |
-| `HEALTH_URL` | URL HTTPS de `/healthz` para API/frontend |
+| `HEALTH_URL` | URL HTTPS de saúde: `/healthz` no frontend, `/api/healthz` na API |
 
 `ZOT_USER` e `ZOT_PASSWORD` já existentes em `/zot` são obtidos pela action Infisical somente depois do build. Nenhum segredo é argumento Docker. Não copiar credenciais de runtime para GitHub Secrets. PRs nunca executam o job de publicação.
 
@@ -30,20 +30,29 @@ A identidade `github-ia-trainner-frontend` usa OIDC com subject imutável exato 
 
 A chave GitHub de leitura do Argo fica em `/ia-trainner/gitops`, variável `FRONTEND_SSH_PRIVATE_KEY`; o operador materializa o Secret do repositório. Pull credentials usam `/zot`. A configuração de DNS lê `/cloudflare` em memória; nenhum token é enviado ao bundle ou à imagem.
 
-Somente o frontend está com `DEPLOY_ENABLED=true`. O endpoint entrega a base Angular de migração; não representa conclusão de login, API pública ou treinamento.
+## Backend configurado (M1)
+
+A API é publicada na mesma origem: o Traefik envia `/api` ao Service `ia-trainner-backend` sem reescrever o caminho; o restante vai ao frontend. Saúde da API: `/api/healthz` (revisão própria, distinta do `/healthz` do frontend). O workload é agendado no h6, como o frontend.
+
+A identidade `github-ia-trainner-backend` repete o padrão do frontend: OIDC com subject imutável exato do repositório do backend, environment `production`, ref `refs/heads/main`, audience do Infisical e papel `ia-trainner-zot-reader`. A chave de leitura do Argo fica em `/ia-trainner/gitops`, variável `BACKEND_SSH_PRIVATE_KEY`, cadastrada no GitHub como deploy key somente leitura.
+
+A configuração da API vem do Infisical `dev /ia-trainner/backend` (issuer, audience = ID do projeto ZITADEL, endpoint/protocolo OTLP de traces e atributos de recurso), materializada pelo operador como Secret `ia-trainner-backend` e lida por `envFrom`. Nenhum desses valores é credencial; credenciais de adaptadores entram na mesma pasta quando existirem. Os identificadores públicos do SPA (authority, project ID, client ID) ficam registrados em `/ia-trainner/frontend` e compilados em `apps/frontend/src/app/core/config/auth-config.ts`; altere os dois juntos.
+
+Frontend e backend estão com `DEPLOY_ENABLED=true`. Python permanece desativado. O Argo CD usa uma única Application `ia-trainner` multi-source (branches `gitops` do frontend e do backend), no AppProject restrito `ia-trainner`.
 
 ## Bootstrap dos próximos componentes em infra-k8s
 
-Antes de habilitar entrega, configurar namespace `ia-trainner`, pull secret `zot-creds` sincronizado do Infisical, rotas TLS, política de rede e Applications Argo CD com permissão de leitura dos repositórios privados. API referencia Secret `ia-trainner-backend`; deve ser sincronizado pelo operador com escopo da aplicação. O principal não administra bancos, credenciais de infraestrutura ou RBAC global.
+Antes de habilitar entrega, configurar namespace `ia-trainner`, pull secret `zot-creds` sincronizado do Infisical, rotas TLS, política de rede e Applications Argo CD com permissão de leitura dos repositórios privados. A API referencia o Secret `ia-trainner-backend`, sincronizado pelo operador a partir de `/ia-trainner/backend`. O principal não administra bancos, credenciais de infraestrutura ou RBAC global.
 
 | Escopo proposto no Infisical | Variáveis |
 |---|---|
-| `/ia-trainner/backend` | `Authentication__Authority`, `Authentication__Audience`, `OTEL_EXPORTER_OTLP_ENDPOINT`; credenciais das integrações quando seus adaptadores forem implementados |
+| `/ia-trainner/backend` (criado) | `Authentication__Authority`, `Authentication__Audience`, `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`, `OTEL_EXPORTER_OTLP_TRACES_PROTOCOL`, `OTEL_RESOURCE_ATTRIBUTES`; credenciais das integrações quando seus adaptadores forem implementados |
+| `/ia-trainner/frontend` (criado) | `ZITADEL_AUTHORITY`, `ZITADEL_PROJECT_ID`, `ZITADEL_CLIENT_ID` — registro dos identificadores públicos do SPA |
 | `/ia-trainner/training` | `FINETUNING_DATABASE_URL`, credenciais restritas de artefatos, configuração de execução |
 | `/embedding` existente | `sdk-gemini-1`, `sdk-gemini-2`; mapear para nomes aceitos pelo backend, sem renomear/destruir as chaves existentes |
 | `/zot` existente | `ZOT_USER`, `ZOT_PASSWORD` |
 
-Não foi criada aplicação OIDC **de usuário no ZITADEL** nem escolhido audience arbitrário da API. A identidade OIDC de CI no Infisical é separada. Não reaproveitar senhas administrativas dos bancos como credenciais da aplicação. Os scopes novos e suas identidades ainda precisam de configuração antes do deploy.
+No ZITADEL (`https://auth.victorpersike.dev.br`), o projeto **IA Trainner** (`392292462074267754`, separado do WebContador) retorna funções na autenticação e tem a função `user`. A aplicação `ia-trainner-web` é User Agent com Authorization Code + PKCE, sem client secret, access token JWT com funções e URIs exatas de callback/logout do domínio (client ID `392292695797663850`). A API aceita somente access tokens desse audience com a função `user` do projeto; conta autenticada sem a função recebe 403. A identidade OIDC de CI no Infisical é separada. Não reaproveitar senhas administrativas dos bancos como credenciais da aplicação; o M2 criará papéis próprios `ia-trainner-sql-ddl` (migrações) e `ia-trainner-sql-dml` (aplicação).
 
 Python publica uma imagem e um ConfigMap contendo seu digest para futura seleção pelo executor. O pipeline não aplica Job de treinamento nem reserva GPU. O treinamento real exige avaliação de CUDA, bibliotecas, dataset e memória na P7; build/testes CPU não certificam isso.
 
