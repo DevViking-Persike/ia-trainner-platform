@@ -4,24 +4,25 @@ O ponto de partida documentado em 25/09/2026 é uma página Angular de migraçã
 
 ## M1 — acesso
 
-**Resultado:** o usuário abre o domínio, clica em **Entrar**, autentica no ZITADEL, acessa uma área interna e recebe uma resposta real da API .NET com seu contexto autorizado.
+**Resultado:** o usuário abre o domínio, clica em **Entrar**, autentica na **tela própria da IA Trainner** (a tela hospedada do ZITADEL não é usada), acessa uma área interna e recebe uma resposta real da API .NET com seu contexto autorizado. Decisão do titular (25/09/2026): o navegador não recebe tokens; a API .NET é um BFF que fala com o ZITADEL e mantém a sessão no servidor. Contrato: `docs/architecture/auth-bff.md`.
 
 Implementação:
 
-- Substituir a ambiguidade do rótulo “Nova plataforma” por estado informativo e um controle de entrada funcional. Criar rotas da página inicial, callback, área autenticada, acesso negado e página não encontrada.
-- Configurar uma aplicação SPA no projeto ZITADEL apropriado, com callbacks e logout URLs exatos para o domínio e para desenvolvimento quando necessário. Obter os identificadores reais e configurar a audience da API corretamente. Usar biblioteca OIDC mantida com discovery/PKCE/state/nonce; não escrever um protocolo próprio.
-- Tratar retorno do login, cancelamento, expiração de sessão, logout e retorno a uma rota local permitida. Não enviar tokens a destinos arbitrários nem registrar tokens/claims pessoais em logs públicos.
-- Integrar Angular à API com o access token adequado; validação de issuer, audience, assinatura e validade no servidor. Guards da SPA são conveniência de navegação, não controle de acesso suficiente.
-- Entregar endpoint de contexto do usuário autenticado com dados mínimos, e uma tela que o consuma. Mostrar estados reais de carregamento/erro e identificar recursos ainda indisponíveis. Não criar métricas fictícias para preencher o dashboard.
-- Publicar API no H6 usando os manifests e pipeline existentes, Infisical, OIDC de CI e Argo. Preferir mesma origem com `/api` para a API, preservando os caminhos do backend; definir rota própria de saúde da API. Adaptar CORS somente se a topologia exigir.
-- Confirmar exportação OTel e contexto de uma requisição de teste até o coletor/Grafana existente; falha de observabilidade deve ficar explícita, sem confundi-la com funcionamento do login.
+- Telas próprias no Angular: `/entrar` (usuário e senha, depois TOTP quando a conta tiver), `/cadastro`, `/verificar-email`, `/recuperar-senha`, `/recuperar-senha/nova`, área autenticada, acesso negado e página não encontrada. Nenhum SDK OIDC nem token no bundle, storage ou URLs.
+- BFF na API: Session API v2, OIDC service v2 (Authorization Code + PKCE executado no servidor, com `state`, `nonce` e checagem de `clientId`/`redirectUri` antes de finalizar) e User service v2 do ZITADEL, com uma conta de serviço própria que tem só `IAM_LOGIN_CLIENT`. Não reutilizar contas de serviço de outros produtos.
+- Sessão por cookie `__Host-` `HttpOnly`, `Secure`, `SameSite=Strict`; ticket no Redis com usuário ACL próprio; CSRF por cabeçalho próprio e `Origin` exato em métodos inseguros (os subdomínios são *same-site*); rate limiting; respostas neutras (inclusive em tempo) onde a existência da conta vazaria.
+- A API valida issuer, audience, assinatura, validade e rejeita ID tokens tanto no bearer quanto nos tokens obtidos pelo BFF. Guards da SPA são conveniência de navegação.
+- E-mails de conta enviados pela API (códigos com `returnCode` do ZITADEL, links para as telas próprias, sem códigos em logs).
+- Endpoint de contexto do usuário autenticado com dados mínimos e tela que o consuma, com estados reais de carregamento/erro e módulos indisponíveis explícitos.
+- Publicar API no H6 com os manifests e pipeline existentes, Infisical, OIDC de CI e a Application Argo única `ia-trainner`; mesma origem com `/api`; rota própria de saúde da API.
+- Confirmar exportação OTel e contexto de uma requisição de teste até o coletor/Grafana existente.
 
 Aceite:
 
-- Entrada e callback reais no domínio com uma conta autorizada; logout e sessão expirada têm comportamento correto.
-- Acesso direto à rota privada sem sessão encaminha ao login. A API rejeita token ausente, expirado, assinatura inválida e audience errada; recurso não autorizado retorna 403 ou resposta equivalente sem vazamento.
-- Refresh da rota interna funciona; `/api` devolve a resposta JSON esperada, sem cair no fallback HTML do Angular.
-- Não há segredo no bundle, no commit ou nos logs. Testes/build, Actions, Argo e revisões dos dois serviços conferidos.
+- Entrada real no domínio pela tela própria com uma conta autorizada; TOTP quando configurado; logout encerra a sessão local e a do ZITADEL; sessão expirada e refresh da rota interna têm comportamento correto.
+- Cadastro envia e-mail real de verificação e o link conclui a verificação; recuperação de senha envia e-mail real e o link define a nova senha. Conta sem a função `user` vê acesso negado, e a API responde 403 sem vazamento.
+- Acesso direto à rota privada sem sessão encaminha à tela própria de login. A API rejeita token/sessão ausente, expirado, assinatura inválida, audience errada, ID token e requisições inseguras sem o cabeçalho CSRF.
+- `/api` devolve JSON, sem cair no fallback HTML do Angular. Nenhum token ou segredo no bundle, no navegador, no commit ou nos logs. Testes/build, Actions, Argo e revisões dos serviços conferidos.
 
 Se não for possível testar login real por falta de interação do titular da conta, registrar M1 como pendente dessa verificação, não como entregue.
 

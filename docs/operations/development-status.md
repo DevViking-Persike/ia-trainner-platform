@@ -4,8 +4,8 @@ Registro mantido pelo workflow `/entregar-plataforma`. Estados: `pendente`, `em 
 
 | Marco | Estado | Atualizado |
 |---|---|---|
-| M1 — acesso | em andamento (fluxo OIDC verificado; tela própria de login pendente) | 25/09/2026 |
-| M2 — documentos | pendente | — |
+| M1 — acesso | em andamento (tela própria + BFF publicados e login verificado; faltam cadastro/recuperação com e-mail real e limpeza) | 25/09/2026 |
+| M2 — documentos | em andamento (contratos, repositórios DDL/DML em branches; infra pendente) | 25/09/2026 |
 | M3 — conhecimento e conversas | pendente | — |
 | M4 — treinamento | pendente | — |
 
@@ -87,9 +87,22 @@ Contrato: [auth-bff](../architecture/auth-bff.md). Implementação em paralelo p
 | Rede | Redis aceita só o pod da API; API com saída para Redis 6379 e SMTPS 465 |
 | Infisical `/ia-trainner/backend` | chaves `Zitadel__*`, `Frontend__*`, `ConnectionStrings__Redis`, `Email__*` (Hostinger `smtp.hostinger.com:465`, remetente `contato@victorpersike.dev.br`); `Email__SmtpPassword` vazio até o titular preencher |
 
+### Tela própria de login — publicada e verificada no domínio
+
+| Repositório | Commits | Actions | Revisão |
+|---|---|---|---|
+| ia-trainner-backend-dotnet | `6d1834a`, `c6295d2` (BFF: Session/OIDC/User v2, cookie + Redis, CSRF, rate limit, respostas neutras em tempo) | [36122942298](https://github.com/DevViking-Persike/ia-trainner-backend-dotnet/actions/runs/36122942298) | `prod-c6295d2a50cfccef4475943ca5947ef6bb97d681-36122942298-1` |
+| ia-trainner-frontend-angular | `2dca1b4`, `7bb9a8b` (telas `/entrar` com TOTP, `/cadastro`, `/verificar-email`, `/recuperar-senha`, sem OIDC no navegador) | [36123405490](https://github.com/DevViking-Persike/ia-trainner-frontend-angular/actions/runs/36123405490) | `prod-7bb9a8bb8b5fbbc221a94cff4bdd8dc832218d08-36123405490-1` |
+
+Testes: backend 167 (160 API + 7 domínio) e 17 mutações de segurança detectadas; frontend 186; revisão adversarial sem achados críticos/altos. Smoke local contra o ZITADEL real antes do deploy.
+
+Evidências no domínio: `/app` sem sessão → `/entrar?returnUrl=…`; política de senha lida do ZITADEL pelo BFF; login inexistente → `401 invalid_credentials` em ~1,2 s (tempo constante); POST sem `X-IAT-Request` ou com `Origin` de outro subdomínio → `403 csrf`; login real do titular pela tela própria → `/app?aba=teste`, `/api/me` 200 pela sessão (função `user`, `no-store`), cookie de sessão invisível ao JavaScript, `sessionStorage`/`localStorage` vazios, **zero** chamadas do navegador a terceiros; chave de Data Protection gravada no Redis pela ACL; log "Login próprio ativo".
+
 ### Pendências
 
-- Opcional: exercitar a página `/acesso-negado` com uma conta real sem a função (exige remover e restaurar temporariamente a atribuição no ZITADEL); hoje coberta pelo 403 real da API e por testes unitários.
-- Sem cliente ZITADEL para `localhost`: o login local aparece como indisponível até existir um app em modo de desenvolvimento separado.
-- Tela própria de login: substituir a tela hospedada do ZITADEL mantendo a emissão de tokens pelo ZITADEL e a validação atual da API (próxima ação do M1).
-- Depois do M1: concluir o inventário da migração Svelte → Angular e iniciar o M2 com os repositórios `ia-trainner-sql-ddl`/`ia-trainner-sql-dml`.
+1. Conta de uso nova (não usar a admin do ZITADEL na plataforma): gerar senha forte e gravar login/senha no Infisical `dev /ia-trainner/acesso` (fora de qualquer Secret do cluster); o titular cria a conta em `/cadastro` com e-mail que lê; conceder a função `user` no projeto IA Trainner; depois remover `user` da conta admin.
+2. Verificar no domínio: e-mail real de verificação (Hostinger) e link `/verificar-email`; conta sem função → `/acesso-negado`; recuperação de senha com e-mail real; logout encerrando sessão local e do ZITADEL; refresh de `/app`.
+3. Desativar no ZITADEL o app antigo `ia-trainner-web` (client `392292695797663850`, PKCE no navegador); o app ativo é `ia-trainner-bff` (`392299457619691626`). Opcional: remover as chaves obsoletas de `/ia-trainner/frontend`.
+4. Melhorias anotadas: exigir e-mail verificado no login (`email_not_verified`), cifrar o ticket da sessão no Redis com Data Protection, limpar chaves `oidc.*` antigas do navegador, verificar `forceMfa` por organização no ZITADEL real.
+5. M2: integrar a passada de reconciliação dos pacotes (branches `worktree-wf_59df0d72-c93-9` no principal, `codex/m2-ddl-bootstrap`, `codex/m2-dml-bootstrap`), criar no cluster banco `ia_trainner`, papéis e esquema, pasta Infisical `/ia-trainner/sql-ddl`, tópicos Kafka, bucket RustFS e fontes Argo; depois os pacotes WP-M2-10…40 do plano (`.workspace-local/migration-inventory-2026-09-25.json`).
+6. Observado fora do escopo: CronJob `postgres-backup` falhando há 4 dias e `mongodb-exporter` em crashloop no cluster.

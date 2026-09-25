@@ -34,7 +34,7 @@ Leia os critérios do marco escolhido em [references/marcos.md](references/marco
 | Frontend | Angular standalone, TypeScript strict, features e adaptadores HTTP; `apps/frontend` |
 | Backend | .NET 10 LTS; Domain, Application, Infrastructure, API e Worker; `services/backend` |
 | Arquitetura | Clean/Hexagonal para dependências e portas; DDD para domínio; Kafka para integração por eventos na mesma solução |
-| Identidade | ZITADEL; OIDC Authorization Code + PKCE para SPA; validação e autorização na API |
+| Identidade | ZITADEL com telas próprias; BFF .NET (Session API v2 e OIDC no servidor, cookie `httpOnly` + sessão no Redis); validação e autorização na API |
 | Estado | PostgreSQL e outbox durável; Redis para cache; MongoDB para conversas; Qdrant para vetores; S3/RustFS para arquivos e artefatos |
 | IA | Gemini via SDK oficial apropriado para documentos/embeddings; modelos da P7 como último recurso |
 | Execução | Angular/API/Worker na H6; treino Python em Jobs Kubernetes na P7, RTX 3060 de 12 GB |
