@@ -10,6 +10,8 @@
 [submodule "ia-trainner-microservice-go"]
 	path = legacy/backend-go
 	url = https://github.com/DevViking-Persike/ia-trainner-microservice-go.git
+	update = none
 [submodule "ia-trainner-microservice-keycloak-dotnet"]
 	path = legacy/auth-keycloak-dotnet
 	url = https://github.com/DevViking-Persike/ia-trainner-microservice-keycloak-dotnet.git
+	update = none

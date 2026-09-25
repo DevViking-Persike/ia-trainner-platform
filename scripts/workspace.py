@@ -40,7 +40,7 @@ def main():
     if args.command == "init":
         selected = [m["path"] for m in MODULES if m["active"] or args.legacy]
         # Never recursively initialize legacy/secrets or download llama.cpp implicitly.
-        run("git", "submodule", "update", "--init", "--", *selected)
+        run("git", "submodule", "update", "--init", "--checkout", "--", *selected)
     elif args.command == "check":
         check()
     else:

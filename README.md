@@ -22,7 +22,7 @@ python3 scripts/workspace.py check
 python3 scripts/workspace.py link-dev
 ```
 
-Os checkouts reais ficam dentro do principal. `link-dev` cria atalhos por symlink ao lado dele, sem duplicar dados e sem sobrescrever diretórios existentes. Symlinks são locais; GitHub recebe gitlinks de modo `160000`. Não usar clone recursivo do legado: ele contém infraestrutura e secrets históricos privados.
+Os checkouts reais ficam dentro do principal. `link-dev` cria atalhos por symlink ao lado dele, sem duplicar dados e sem sobrescrever diretórios existentes. Symlinks são locais; GitHub recebe gitlinks de modo `160000`. O legado usa `update = none`; para consultá-lo explicitamente, execute `python3 scripts/workspace.py init --legacy`. Não inicialize seus submódulos recursivamente: eles contêm infraestrutura e secrets históricos privados.
 
 ```sh
 cd apps/frontend
