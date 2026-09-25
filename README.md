@@ -2,6 +2,8 @@
 
 Repositório principal da plataforma de documentos, RAG e treinamento de modelos.
 
+Endereço web: **https://ia-trainner.victorpersike.dev.br**. DNS, TLS e bootstrap do cluster pertencem ao `infra-k8s`.
+
 | Componente | Tecnologia | Caminho |
 |---|---|---|
 | Frontend | Angular 22 | `apps/frontend` |
@@ -48,7 +50,7 @@ Cada processo recebe seu escopo. O Angular e os clientes nativos nunca recebem c
 
 ## Entrega
 
-GitHub Actions valida os componentes e segue a referência `site-persike-svelte`: imagem OCI → Zot com digest → branch `gitops` → Argo CD → verificação da release. Credenciais de publicação são obtidas do Infisical por OIDC, sem valores no repositório ou nos build args. Publicação permanece desativada até configurar identidade, registry, manifests e rota de verificação. Python publica uma imagem de Job; CI nunca inicia treino.
+GitHub Actions valida os componentes e segue a referência `site-persike-svelte`: imagem OCI → Zot com digest → branch `gitops` → Argo CD → verificação da release. Credenciais de publicação são obtidas do Infisical por OIDC, sem valores no repositório ou nos build args. O frontend tem publicação habilitada no domínio oficial. Backend e Python permanecem com publicação desativada até concluir seus pré-requisitos de runtime. Python publica uma imagem de Job; CI nunca inicia treino.
 
 Veja [arquitetura atual](docs/architecture/platform.md), [configuração de entrega](docs/operations/delivery.md) e [política de segurança](SECURITY.md).
 

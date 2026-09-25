@@ -18,7 +18,7 @@ API e Worker são executáveis da mesma solução, com ciclos de execução sepa
 
 Fluxo de documentos: extração direta quando houver texto utilizável; modelo multimodal Gemini para imagens/PDFs que precisem de OCR; texto dividido em trechos; embeddings Gemini; índice Qdrant específico para o perfil. P7 é último recurso para embeddings/visão. O fallback exige índice compatível, nunca mistura vetores de modelos distintos. Durante treino, a GPU fica exclusiva e o serviço de inferência é restaurado por reconciliação.
 
-Frontend web/API/Worker ficam na H6. Python com GPU e Ollama ficam na P7. Os bancos e o stack Grafana existentes continuam sob gestão de `infra-k8s`; não foram incorporados ao principal público. Bibliotecas Python de OCR em CPU podem ser usadas na H6 quando necessário: placement depende do recurso exigido, não da linguagem.
+O frontend usa `https://ia-trainner.victorpersike.dev.br`, com DNS Cloudflare, TLS automático no Traefik e bootstrap em `infra-k8s/clusters/flex/apps/ia-trainner`. Frontend web/API/Worker ficam na H6. Python com GPU e Ollama ficam na P7. Os bancos e o stack Grafana existentes continuam sob gestão de `infra-k8s`; não foram incorporados ao principal público. Bibliotecas Python de OCR em CPU podem ser usadas na H6 quando necessário: placement depende do recurso exigido, não da linguagem.
 
 Identidade: ZITADEL, com OIDC/PKCE para clientes públicos e validação de issuer/audience/assinatura na API. Bibliotecas antigas de Keycloak permanecem como referência e não são o backend ativo. Nenhuma chave Gemini ou credencial administrativa pode ser enviada ao Angular/Tauri.
 
@@ -30,6 +30,7 @@ Observabilidade: OpenTelemetry nos processos .NET/Python, W3C trace context em H
 - .NET 10 API/Worker e projetos Domain/Application/Infrastructure; regra de janela testada; autenticação fechada por padrão e saúde/revisão.
 - Python existente reaproveitado; imagem CUDA e pipeline de entrega preparados. Nenhum treino GPU validado nesta reorganização.
 - Pipelines Actions para os três componentes ativos, com credenciais Infisical em runtime e manifests GitOps por digest.
-- Adaptadores de negócio, clientes ZITADEL, scopes da aplicação, bootstrap Argo/Secrets, integração de Gemini e migração funcional das telas são trabalho pendente; nenhum deploy foi disparado.
+- Bootstrap do frontend criado no `infra-k8s`: namespace, pull secret e chave GitOps pelo Infisical, projeto Argo restrito, regras de rede, DNS e TLS. Publicação do Angular habilitada no GitHub Actions.
+- Adaptadores de negócio, clientes ZITADEL, scopes de backend/treinamento, integração de Gemini e migração funcional das telas continuam pendentes; a publicação inicial entrega a página Angular de migração.
 
 As bases são pontos de partida verificáveis, não uma aplicação de treinamento pronta para produção.
