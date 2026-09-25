@@ -1,7 +1,7 @@
 # ADR-0006 — Auth via Cookie httpOnly (Web) e Tauri Store (Desktop/Mobile)
 
 ## Status
-Aceito · Implementado (com cookie base64; migração para JWT real pendente)
+Superseded por ADR-0007
 
 ## Data
 2026-04-27
