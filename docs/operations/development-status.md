@@ -5,7 +5,7 @@ Registro mantido pelo workflow `/entregar-plataforma`. Estados: `pendente`, `em 
 | Marco | Estado | Atualizado |
 |---|---|---|
 | M1 — acesso | em andamento (tela própria + BFF publicados e login verificado; faltam cadastro/recuperação com e-mail real e limpeza) | 25/09/2026 |
-| M2 — documentos | em andamento (contratos, repositórios DDL/DML em branches; infra pendente) | 25/09/2026 |
+| M2 — documentos | em andamento (contratos e SQL reconciliados; integração local validada em PostgreSQL 17/18; infraestrutura aguarda autorização) | 25/09/2026 |
 | M3 — conhecimento e conversas | pendente | — |
 | M4 — treinamento | pendente | — |
 
@@ -19,9 +19,11 @@ Registro mantido pelo workflow `/entregar-plataforma`. Estados: `pendente`, `em 
 
 ## M1 — acesso
 
-### Plano e contratos
+### Histórico da primeira entrega SPA — substituído pelo BFF
 
-Fluxo: `Entrar` → ZITADEL (Authorization Code + PKCE, state e nonce) → `/auth/callback` → `/app` → API .NET com bearer token → contexto autorizado na tela.
+O contrato vigente está em [auth-bff](../architecture/auth-bff.md): tela própria → API BFF → cookie de sessão → `/app`. A seção abaixo preserva a evidência da implementação anterior; não deve orientar o M2.
+
+Fluxo anterior: `Entrar` → ZITADEL (Authorization Code + PKCE, state e nonce) → `/auth/callback` → `/app` → API .NET com bearer token → contexto autorizado na tela.
 
 | Contrato | Autenticação | Resposta |
 |---|---|---|
@@ -104,5 +106,51 @@ Evidências no domínio: `/app` sem sessão → `/entrar?returnUrl=…`; políti
 2. Verificar no domínio: e-mail real de verificação (Hostinger) e link `/verificar-email`; conta sem função → `/acesso-negado`; recuperação de senha com e-mail real; logout encerrando sessão local e do ZITADEL; refresh de `/app`.
 3. Desativar no ZITADEL o app antigo `ia-trainner-web` (client `392292695797663850`, PKCE no navegador); o app ativo é `ia-trainner-bff` (`392299457619691626`). Opcional: remover as chaves obsoletas de `/ia-trainner/frontend`.
 4. Melhorias anotadas: exigir e-mail verificado no login (`email_not_verified`), cifrar o ticket da sessão no Redis com Data Protection, limpar chaves `oidc.*` antigas do navegador, verificar `forceMfa` por organização no ZITADEL real.
-5. M2: integrar a passada de reconciliação dos pacotes (branches `worktree-wf_59df0d72-c93-9` no principal, `codex/m2-ddl-bootstrap`, `codex/m2-dml-bootstrap`), criar no cluster banco `ia_trainner`, papéis e esquema, pasta Infisical `/ia-trainner/sql-ddl`, tópicos Kafka, bucket RustFS e fontes Argo; depois os pacotes WP-M2-10…40 do plano (`.workspace-local/migration-inventory-2026-09-25.json`).
+5. M2: contratos e SQL reconciliados (registro abaixo). Aguardar autorização para a infraestrutura preparada, depois continuar WP-M2-10…40. O inventário local contém critérios antigos de bearer/sessionStorage: prevalecem os contratos M2 e o BFF vigente.
 6. Observado fora do escopo: CronJob `postgres-backup` falhando há 4 dias e `mongodb-exporter` em crashloop no cluster.
+
+
+## Retomada em 25/09/2026 — aceitação M1 e base SQL M2
+
+### M1: estado reconfirmado, aceitação humana pendente
+
+A Application `ia-trainner` foi consultada e estava `Synced/Healthy`, frontend e API com 1/1 réplica no H6. `/healthz` e `/api/healthz` devolveram as revisões `7bb9a8b` e `c6295d2` da entrega BFF acima. Essa verificação de saúde não substitui cadastro, e-mail, login ou recuperação de senha.
+
+Foi solicitado ao titular o e-mail da conta de uso. Ainda não foram geradas credenciais, criada conta, concedida/removida função ou desativado aplicativo nesta retomada. O M1 permanece **em andamento** até executar com o titular: cadastro e verificação → login sem função (`/acesso-negado`) → concessão de `user` → `/app`, refresh e logout → recuperação com senha nova → retirada da função da conta administrativa e desativação do app antigo. Não registrar dados pessoais nas evidências públicas.
+
+### M2: reconciliação concluída localmente
+
+Integradas as branches de contratos `worktree-wf_59df0d72-c93-9`/`codex/m2-contracts` com o estado BFF atual e os trabalhos `codex/m2-ddl-bootstrap`/`codex/m2-dml-bootstrap`. Correções adicionais:
+
+- Bootstrap dedicado, repetível, com senhas pelo ambiente via `\getenv`; `PUBLIC` já perde acesso ao banco/schema `public` antes do Flyway. Arquivo incluído em `/flyway/bootstrap/infra-bootstrap.sql` na imagem DDL.
+- Os três blocos SQL do contrato são idênticos byte a byte ao bootstrap e às migrações V0001/V0002. Verificação reproduzível: `python3 scripts/check-m2-sql-contract.py` (submódulo DDL presente) ou `--ddl-dir` com o checkout revisado. As migrações V0001/V0002 não foram reescritas nesta reconciliação.
+- DML usa o Dockerfile real do DDL e seu bootstrap, ou a imagem DDL fixada por digest; preserva callbacks e `createSchemas=false`. Históricos protegidos inclusive quando a primeira migração de dados falha.
+- Secret único dos migradores `ia-trainner-sql-ddl`; hooks DDL `-2`, DML `-1`. O teste sintético isolado exige opção explícita e nunca é registrado como integração real. A publicação DML exige `DDL_IMAGE` e integração real 17/18.
+- Recursos Docker dos testes removidos ao terminar (contêineres, volumes anônimos, redes e tags de imagens próprias), sem limpeza global.
+
+| Verificação executada | Resultado |
+|---|---|
+| DDL `scripts/verify.sh`, PostgreSQL 17.11 | passou; bootstrap repetido, migrações repetidas, catálogo, isolamento de donos, cascata, privilégios mínimos e guardas negativos |
+| DDL `POSTGRES_IMAGE=postgres:18 bash scripts/verify.sh`, PostgreSQL 18.6 | passou; mesma suíte |
+| DML `DDL_REPO_DIR=<DDL revisado> bash scripts/verify.sh`, PostgreSQL 17.11 | passou; imagem real/mesmo bootstrap, históricos, idempotência e rollback de scripts V/R sintéticos |
+| DML com `POSTGRES_IMAGE=postgres:18` e mesmo DDL, PostgreSQL 18.6 | passou; mesma integração real |
+| DML `ALLOW_SYNTHETIC_DDL=1 bash scripts/verify.sh` | passou; valida só o pipeline isolado usado no CI sem acesso ao DDL privado |
+| `actionlint`, `bash -n`, `kubectl kustomize`, `git diff --check`, Gitleaks | passaram nos repositórios SQL; Gitleaks executado antes de cada tentativa de push |
+| `python3 scripts/workspace.py check` e `check-m2-sql-contract.py` | passaram no principal |
+
+### Publicação SQL
+
+| Repositório | Revisão | GitHub Actions |
+|---|---|---|
+| [ia-trainner-sql-ddl](https://github.com/DevViking-Persike/ia-trainner-sql-ddl) | `83a3e13087b9da555b05f83e93bbd66260b51abc` | [36185937337](https://github.com/DevViking-Persike/ia-trainner-sql-ddl/actions/runs/36185937337) — sucesso (CI); publicação Zot desabilitada |
+| [ia-trainner-sql-dml](https://github.com/DevViking-Persike/ia-trainner-sql-dml) | `15c31e9850eed1e8df6860a3fc67dbca274f6ca8` | [36185937510](https://github.com/DevViking-Persike/ia-trainner-sql-dml/actions/runs/36185937510) — sucesso (CI); publicação Zot desabilitada |
+
+Os commits estão em `main` dos componentes. `DEPLOY_ENABLED` ainda não foi configurado nos dois repositórios: publicar o código não aplicou migrações nem publicou imagens no Zot. Nenhum Job SQL foi executado contra o PostgreSQL compartilhado nesta retomada.
+
+### Infraestrutura M2 preparada, não aplicada
+
+No repositório privado `infra-k8s`, branch local `codex/ia-trainner-m2-preparation`, commit `19f508a`, o arquivo `clusters/flex/apps/ia-trainner/M2-approval.md` descreve recursos, ordem, pré-condições e reversão. Inclui Jobs dedicados de PostgreSQL/Kafka, Secrets separados para migradores/Worker, fontes e permissões Argo, políticas de rede e políticas JSON de bucket/credenciais/lifecycle RustFS. O Job compartilhado `init-databases` e os arquivos não rastreados preexistentes foram preservados.
+
+`kubectl apply --server-side --dry-run=server` aprovou os manifests de apps, os Jobs dedicados e a Application proposta. Foi apenas simulação; não comprova conectividade, execução ou suporte RustFS a todas as operações. A autorização explícita do titular foi solicitada antes de qualquer aplicação, conforme a instrução desta retomada.
+
+Próximas ações: obter a resposta sobre o e-mail da conta de uso e executar a aceitação M1 com o titular; após autorização da proposta M2, provisionar seus pré-requisitos, publicar a imagem DDL e fixar seu digest no DML/backend. Depois implementar WP-M2-10…40, preservando a separação de segredos API/Worker e o consentimento Gemini. Nenhuma capacidade de documentos foi habilitada na plataforma nesta etapa.
