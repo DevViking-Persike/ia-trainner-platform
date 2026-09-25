@@ -54,6 +54,8 @@ GitHub Actions valida os componentes e segue a referência `site-persike-svelte`
 
 Veja [arquitetura atual](docs/architecture/platform.md), [configuração de entrega](docs/operations/delivery.md) e [política de segurança](SECURITY.md).
 
+Para desenvolver os próximos fluxos com Claude Code, use o [workflow de entrega por marcos](docs/workflows/claude-delivery.md), começando por `/entregar-plataforma acesso`.
+
 ## Histórico da migração
 
 O principal público começa com um snapshot limpo. O repositório anterior `workflows-ia-trainner` continua privado porque seu histórico contém uma credencial antiga. Nenhum histórico remoto foi reescrito. As referências privadas locais são apenas para recuperação: não executar `git push --all` ou `--mirror`.
