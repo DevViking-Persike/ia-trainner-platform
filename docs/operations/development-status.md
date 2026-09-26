@@ -5,9 +5,9 @@ Registro mantido pelo workflow `/entregar-plataforma`. Estados: `pendente`, `em 
 | Marco | Estado | Atualizado |
 |---|---|---|
 | M1 — acesso | em andamento (tela própria + BFF publicados e login verificado; faltam cadastro/recuperação com e-mail real e limpeza) | 25/09/2026 |
-| M2 — documentos | em andamento (contratos e SQL reconciliados; integração local validada em PostgreSQL 17/18; infraestrutura aguarda autorização) | 25/09/2026 |
-| M3 — conhecimento e conversas | pendente | — |
-| M4 — treinamento | pendente | — |
+| M2 — documentos | implementado e validado localmente; infraestrutura aplicada, recurso desativado aguardando confirmação do aviso Gemini | 26/09/2026 |
+| M3 — conhecimento e conversas | em andamento; histórico MongoDB verificado no ambiente, RAG pendente | 26/09/2026 |
+| M4 — treinamento | em andamento; runtime validado em CPU, integração Kubernetes/GPU pendente | 26/09/2026 |
 
 ## Decisões registradas para os próximos marcos
 
@@ -230,3 +230,35 @@ Auditoria de todos os refs publicados: principal público e componentes ativos p
 O laboratório **não é o M3 completo**: sem RAG, documentos, fontes ou histórico persistente. O treinamento **não está entregue**: falta executor Kubernetes e validação da imagem Python/GPU. Gestão completa de modelos, equipes e monitoramento de servidor também permanecem fora da migração concluída.
 
 O código M2 agora está publicado, mas `Documents__Enabled=false` mantém seus endpoints e consentimento indisponíveis. A informação sobre faturamento das duas chaves Gemini continua pendente; nenhum aceite da variante provisória foi solicitado no ambiente. Após a resposta do titular, finalizar o aviso, ativar M2 pelo Infisical e validar upload/processamento/páginas/exclusão no domínio. Não registrar documentos como verificados no ambiente enquanto essa etapa não ocorrer.
+
+
+## Conversas MongoDB e contexto — 26/09/2026 (verificado no ambiente)
+
+A versão anterior do laboratório mantinha mensagens somente na memória do Angular. A implementação nova usa MongoDB para histórico por usuário e separa o armazenamento da seleção de contexto do Ollama.
+
+- Backend: branch `codex/chat-persistence`, implementação `b3c99fe`, merge `ea87fc4`; PR [2](https://github.com/DevViking-Persike/ia-trainner-backend-dotnet/pull/2). 230 testes aprovados, 3 opt-in ignorados; integração real MongoDB 8 com o schema canônico, isolamento, role CRUD restrita, idempotência/CAS, Unicode, falha sem mensagens parciais, leitura após nova instância da API e exclusão.
+- Frontend: branch `codex/chat-persistence`, commits `71d6963`, `20ae58a`, `c199fdb`, merge `47ae4c8`; PR [2](https://github.com/DevViking-Persike/ia-trainner-frontend-angular/pull/2). 224 testes e build aprovados. Histórico, URL selecionada, cancelamento/reconciliação, leitura sem provedor, contexto/uso de tokens e navegação unificada.
+- DDL: merge `bffb973`; PR [1](https://github.com/DevViking-Persike/ia-trainner-sql-ddl/pull/1), CI/release [36222076206](https://github.com/DevViking-Persike/ia-trainner-sql-ddl/actions/runs/36222076206) concluída. Validador e índice da coleção `ia_trainner.conversations`; testes MongoDB 8 e suites PostgreSQL 17/18 aprovados. Schema aplicado no cluster antes da ativação, sem registros artificiais.
+- Infra: merge `2c4be0e`; PR [7](https://github.com/DevViking-Persike/infra-k8s/pull/7). Identidade exclusiva `ia_trainner_chat`, CRUD somente em `ia_trainner.conversations`, políticas de rede API→MongoDB aplicadas. Configuração de conexão somente no Infisical `/ia-trainner/backend`, sincronizada pelo operador; Worker/Angular não recebem a conexão.
+- Contexto P7: 8k com 3.773 tokens de entrada em 5,57s/pico 6.631 MiB; 16k com 7.613 tokens em 8,56s/6.903 MiB; 32k com 15.317 tokens em 13,47s/7.447 MiB. Teste adicional de 32k: 27.745 tokens de entrada e 763 de saída, 25,5s, pico 7.447 MiB e marcador inicial recuperado. Todos inteiramente na GPU. Infisical configurado para contexto 32.768 e saída 1.024.
+- Gitleaks: novos commits de backend/frontend/DDL/infra e bundle Angular sem achados. Isso não substitui o relatório de auditoria histórica anterior.
+
+### Publicação e aceitação real
+
+- Backend: [Actions 36222273732](https://github.com/DevViking-Persike/ia-trainner-backend-dotnet/actions/runs/36222273732) concluído; `/api/healthz` confirmou `prod-ea87fc4fe406edb703a180f47c82ac50c9afcbb8-36222273732-1`. API/Worker Ready na H6, digest `sha256:fad1939aeae70899ae4e4e83bfeaeee913a9b48f3556828200d6ec0724cca967`.
+- Frontend: [Actions 36222749701](https://github.com/DevViking-Persike/ia-trainner-frontend-angular/actions/runs/36222749701) concluído; `/healthz` confirmou `prod-47ae4c8889d2729dfc24615cda7848d75d66ffbf-36222749701-1`. Pod Ready na H6, digest `sha256:46cb1293c967c91d5f93ed739c88318ca3c099f706fc3253d8dd854de75f9ef5`.
+- Argo `Synced/Healthy`; revisões frontend `cc74f4546c909aaa938f4305a60ecaa36c1a84d0`, backend `d583af6285842b0d5e3afd10cbe790a4ab458b91`, DDL `37aeb5f656518dc182083ede412c9677acb8af4c` e DML `b3acca36c1a2f61e9e7602257f0d1b17c21a50f6`. Hooks SQL concluídos.
+- Domínio oficial: criação pela interface, pergunta/resposta sintéticas, recarga da página com recuperação das duas mensagens e segunda pergunta com memória do marcador. MongoDB consultado diretamente confirmou proprietário presente, versão 2, quatro mensagens e consumo da última resposta: 73 tokens de entrada, 3 de saída, contexto 32.768/saída máxima 1.024. Nenhum documento foi inserido manualmente para simular o fluxo.
+- OpenTelemetry: trace `333fddf32098b4d1f14899ffea450e16` encontrado no Jaeger do cluster, com request de mensagem, Ollama 200 e spans MongoDB find/update sem erros. Logs da API não continham a pergunta sintética nem URI MongoDB.
+- Acesso anônimo à API de conversas retorna 401 JSON. Isolamento entre usuários, exclusão, repetição e falhas foram verificados nos testes de integração; exclusão não foi executada na conversa de validação em produção.
+- Gitlinks da composição atualizados para frontend `47ae4c8`, backend `ea87fc4` e DDL `bffb973`. Mensagens da aba antiga continuam temporárias e não foram migradas; a aba foi preservada. A conversa nova permanece como evidência de validação.
+
+### Próximas etapas preparadas
+
+M2 continua desativado (`Documents__Enabled=false`) aguardando confirmação do nível de faturamento das duas chaves Gemini para definir o aviso conforme [contrato de consentimento](../contracts/m2/consentimento-gemini.md). Nenhum documento pessoal foi enviado ao Google.
+
+M3: adaptadores Gemini/Qdrant no [PR backend #3 em rascunho](https://github.com/DevViking-Persike/ia-trainner-backend-dotnet/pull/3), commits `58ea3d6` e `9e0240f`; [Actions 36223044602](https://github.com/DevViking-Persike/ia-trainner-backend-dotnet/actions/runs/36223044602) aprovado, publicação ignorada por ser PR. 238 testes passaram e 5 integrações opt-in foram ignoradas na suíte normal; duas chamadas reais adicionais, exclusivamente sintéticas, passaram com as chaves injetadas pelo Infisical. Perfil `gemini-embedding-001-768-l2-v1`, vetores finitos e normalizados. Chunking, portas e adaptadores preparados; DI, indexação durável/outbox, recuperação, consentimento persistido e citações ainda não conectados. Não habilitar RAG antes de concluir esse fluxo.
+
+M4: runtime Python em `codex/training-runtime-validation`, commits `150a691` e `30e98cd`; imagem Linux amd64 construída, 58 testes rápidos aprovados e 1 integrado opt-in executado separadamente na imagem. Roundtrip CPU real com checkpoint minúsculo sintético: treino de um passo, gravação de adapter PEFT, reabertura em eval e geração limitada em arquivo 0600. Checkpoint Qwen/P7, janela exclusiva de GPU, executor Kubernetes durável, recuperação, avaliação e exportação GGUF/Ollama permanecem pendentes. Não ativar deploy/treinamento com base apenas nesse teste CPU.
+
+Próxima ação dependente de informação: confirmar se ambas as chaves Gemini têm faturamento ativo; então finalizar aviso/consentimento, habilitar e verificar M2 no domínio. M3 e M4 permanecem em andamento, sem declaração de conclusão.
