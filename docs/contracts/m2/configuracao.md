@@ -23,7 +23,7 @@ O M2 acrescenta:
 | `S3__ForcePathStyle` | pública | API, Worker | `true` |
 | `S3__AccessKey`, `S3__SecretKey` | segredo | API, Worker | chave de aplicação restrita aos buckets da IA Trainner |
 | `S3__Buckets__Documents` | pública | API, Worker | `ia-trainner-documents` |
-| `Gemini__ApiKey`, `Gemini__FallbackApiKey` | segredo | Worker | referências do Infisical a `/embedding` `sdk-gemini-1` e `sdk-gemini-2`, sem copiar valores nem renomear as originais; nível de faturamento confirmado pelo titular antes de publicar o aviso ([consentimento-gemini](consentimento-gemini.md#nível-da-gemini-api)) |
+| `Gemini__ApiKey`, `Gemini__FallbackApiKey` | segredo | Worker | referências do Infisical a `/embedding` `sdk-gemini-1` e `sdk-gemini-2`, sem copiar valores nem renomear as originais; enquanto o faturamento não for confirmado, publicar o aviso conservador que informa possível uso do nível gratuito ([consentimento-gemini](consentimento-gemini.md#nível-da-gemini-api)) |
 | `Gemini__OcrModel` | pública | Worker | id de modelo multimodal conferido na API do Gemini antes de configurar; sem valor padrão no código |
 | `Documents__MaxUploadBytes` | pública | API | `52428800` (50 MiB) |
 | `Documents__AllowedMediaTypes` | pública | API | `application/pdf,image/png,image/jpeg,image/webp,text/plain,text/markdown` |

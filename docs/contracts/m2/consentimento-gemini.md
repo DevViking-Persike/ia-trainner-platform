@@ -15,25 +15,27 @@ Decisão do titular em 25/09/2026: documentos podem ir ao Gemini para OCR (M2), 
 
 Os termos da Gemini API tratam o conteúdo conforme o nível da chave. No nível pago (projeto do Google Cloud com faturamento ativo), o Google não usa prompts e respostas para melhorar seus produtos e guarda registros por tempo limitado, só para detectar abuso e cumprir exigências legais. No nível gratuito, o Google usa o conteúdo para melhorar e desenvolver produtos e tecnologias de aprendizado de máquina, e revisores humanos podem lê-lo. Nos dois, o conteúdo pode ser processado ou guardado em qualquer país onde o Google tenha instalações.
 
-- Pendente do titular antes de publicar o aviso: confirmar o nível das duas chaves (`sdk-gemini-1` e `sdk-gemini-2`, ver [configuracao](configuracao.md)). O parágrafo 2 do aviso abaixo vale só se as duas forem do nível pago.
+- Ativação de 26/09/2026: enquanto o nível das duas chaves (`sdk-gemini-1` e `sdk-gemini-2`, ver [configuracao](configuracao.md)) não estiver confirmado, usar a variante conservadora do nível gratuito. Isso não afirma que as chaves são gratuitas ou pagas. O aceite explícito por usuário permanece obrigatório. O parágrafo pago abaixo só pode ser usado após confirmação de ambas.
 - Se alguma chave for do nível gratuito, ela sai da configuração ou o aviso é publicado com a variante do parágrafo 2, que cobre o pior caso.
 - Trocar uma chave por outra de nível diferente do declarado no aviso exige nova versão do aviso antes da troca.
 
 ## Aviso
 
-O texto vive no backend (`IATrainner.Application`), imutável por versão; API e Worker usam a mesma versão atual, definida em código (sem configuração). O Angular exibe `title` e `paragraphs` como texto puro, sem HTML. Versão inicial `gemini-v1`, rascunho para o nível pago, sujeito à revisão do titular antes de publicar:
+O texto vive no backend (`IATrainner.Application`), imutável por versão; API e Worker usam a mesma versão atual, definida em código (sem configuração). O Angular exibe `title` e `paragraphs` como texto puro, sem HTML. Versão inicial `gemini-v1` publicada com a variante conservadora abaixo; nenhuma aceitação existia no banco antes desta ativação. A variante paga fica como referência para uma futura versão após confirmação:
 
 > **Uso do Google Gemini no processamento dos seus documentos**
 >
 > 1. Para ler imagens e PDFs digitalizados, a IA Trainner envia essas páginas ao Google Gemini, serviço de IA do Google. Quando as conversas sobre documentos forem liberadas, o texto dos seus documentos e as suas perguntas também serão enviados ao Gemini para indexação e respostas.
 > 2. O envio usa a conta paga da plataforma na Gemini API. Nessa modalidade, o Google não usa o conteúdo enviado nem as respostas para melhorar seus produtos e guarda registros por tempo limitado, só para detectar abusos e cumprir exigências legais. O conteúdo é processado em servidores do Google que podem ficar fora do Brasil: é uma transferência internacional de dados.
-> 3. Envie apenas documentos que você pode compartilhar com terceiros. Evite dados pessoais sensíveis e material confidencial.
+> 3. Envie apenas documentos que você pode compartilhar com terceiros. Enquanto o envio puder usar o nível gratuito, não envie dados pessoais, informações sensíveis ou material confidencial.
 > 4. Seus arquivos e o texto extraído ficam na infraestrutura da IA Trainner, isolados por conta.
 > 5. Você pode revogar este consentimento no seu perfil. A partir da revogação, nada mais é enviado ao Gemini: nem as páginas que faltarem de um processamento em andamento, nem textos para indexação, nem perguntas. O que já foi enviado ao Google não pode ser recolhido. Excluir um documento o remove em definitivo da plataforma.
 
-Variante do parágrafo 2, obrigatória se alguma chave for do nível gratuito:
+Variante vigente do parágrafo 2, obrigatória se alguma chave for do nível gratuito ou seu nível ainda não tiver sido confirmado:
 
 > 2. O envio pode usar uma chave do nível gratuito da Gemini API. Nessa modalidade, o Google pode usar o conteúdo enviado e as respostas para melhorar e desenvolver seus produtos e tecnologias de aprendizado de máquina, e revisores humanos podem ler esse conteúdo. O conteúdo é processado em servidores do Google que podem ficar fora do Brasil: é uma transferência internacional de dados.
+
+Referência conferida em 26/09/2026: [termos da Gemini API](https://ai.google.dev/gemini-api/terms), seções de uso dos dados nos níveis gratuito e pago. Os testes de aceite usam apenas arquivos sintéticos, sem dados pessoais.
 
 Versões seguem `^[a-z0-9]+(-[a-z0-9]+)*$`, até 32 caracteres (`gemini-v1`, `gemini-v2`...).
 
