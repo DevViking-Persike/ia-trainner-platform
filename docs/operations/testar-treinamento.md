@@ -7,6 +7,8 @@ selecioná-lo não o instala no chat Ollama.
 
 ## Preparar dados
 
+Na tela **Treinamentos**, use **Baixar exemplo (.jsonl)** para obter três registros fictícios. O mesmo formato está em [synthetic-smoke.jsonl](../../examples/training/synthetic-smoke.jsonl). Os limites de 5.000 linhas e 32 MiB são regras de ingestão validadas pela API e pelo Python; não representam a capacidade da GPU. A memória do treino depende também do modelo, dos tokens por exemplo e do lote.
+
 Use o [arquivo sintético de exemplo](../../examples/training/synthetic-smoke.jsonl)
 ou salve um arquivo UTF-8 com extensão `.jsonl`, contendo um objeto por linha:
 

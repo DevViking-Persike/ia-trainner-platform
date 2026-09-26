@@ -6,7 +6,7 @@
 	url = https://github.com/DevViking-Persike/ia-trainner-backend-dotnet.git
 [submodule "estudos-finetuning-py"]
 	path = services/training-python
-	url = https://github.com/DevViking-Persike/estudos-finetuning-py.git
+	url = https://github.com/DevViking-Persike/ia-trainner-finetuning-py.git
 [submodule "ia-trainner-microservice-go"]
 	path = legacy/backend-go
 	url = https://github.com/DevViking-Persike/ia-trainner-microservice-go.git

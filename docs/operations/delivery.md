@@ -20,7 +20,7 @@ Configure variáveis de repositório/ambiente **não sensíveis** no GitHub:
 
 `ZOT_USER` e `ZOT_PASSWORD` já existentes em `/zot` são obtidos pela action Infisical somente depois do build. Nenhum segredo é argumento Docker. Não copiar credenciais de runtime para GitHub Secrets. PRs nunca executam o job de publicação.
 
-Criar identidade Infisical de leitura restrita a `/zot` e vinculá-la ao repository/environment/branch do workflow. Configurar issuer GitHub, audience e subject exatos. Repositórios novos podem usar subjects imutáveis com IDs: confirmar as claims efetivas, sem publicar o JWT. Não usar subject curinga. Referência: [OIDC na action Infisical](https://infisical.com/docs/integrations/cicd/githubactions).
+Criar identidade Infisical de leitura restrita a `/zot` e vinculá-la ao repository/environment/branch do workflow. Configurar issuer GitHub, audience e subject exatos. Repositórios novos ou renomeados podem usar subjects imutáveis com IDs: confirmar as claims efetivas, sem publicar o JWT. Não usar subject curinga. Referência: [OIDC na action Infisical](https://infisical.com/docs/integrations/cicd/githubactions).
 
 ## Frontend configurado
 
@@ -39,6 +39,10 @@ A identidade `github-ia-trainner-backend` repete o padrão do frontend: OIDC com
 A configuração da API vem do Infisical `dev /ia-trainner/backend` (issuer, audience = ID do projeto ZITADEL, endpoint/protocolo OTLP de traces e atributos de recurso), materializada pelo operador como Secret `ia-trainner-backend` e lida por `envFrom`. Nenhum desses valores é credencial; credenciais de adaptadores entram na mesma pasta quando existirem. Os identificadores públicos do SPA (authority, project ID, client ID) ficam registrados em `/ia-trainner/frontend` e compilados em `apps/frontend/src/app/core/config/auth-config.ts`; altere os dois juntos.
 
 Frontend e backend estão com `DEPLOY_ENABLED=true`. Python permanece desativado. O Argo CD usa uma única Application `ia-trainner` multi-source (branches `gitops` do frontend e do backend), no AppProject restrito `ia-trainner`.
+
+## Renomeação do executor Python — 26/09/2026
+
+O repositório privado do executor passou a ser `DevViking-Persike/ia-trainner-finetuning-py`; o checkout permanece em `services/training-python`. O alias de DEV usa o novo nome, e o alias antigo continua apontando para o mesmo checkout para compatibilidade, sem duplicar dados. A Application, o AppProject e a URL da credencial Argo gerenciada pelo Infisical acompanham o novo nome. O GitHub passou a usar subject OIDC imutável após a renomeação; a confiança no Infisical foi ajustada para o prefixo exato retornado por `actions/oidc/customization/sub`, preservando as restrições de `main`, `production`, repository ID e owner ID.
 
 ## Bootstrap dos próximos componentes em infra-k8s
 
