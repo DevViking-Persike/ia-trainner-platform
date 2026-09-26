@@ -4,6 +4,7 @@
   "environment": "dev",
   "paths": {
     "backend": "/ia-trainner/backend",
+    "worker": "/ia-trainner/worker",
     "training": "/ia-trainner/training",
     "embedding": "/embedding"
   }

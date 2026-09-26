@@ -154,3 +154,52 @@ No repositório privado `infra-k8s`, branch local `codex/ia-trainner-m2-preparat
 `kubectl apply --server-side --dry-run=server` aprovou os manifests de apps, os Jobs dedicados e a Application proposta. Foi apenas simulação; não comprova conectividade, execução ou suporte RustFS a todas as operações. A autorização explícita do titular foi solicitada antes de qualquer aplicação, conforme a instrução desta retomada.
 
 Próximas ações: obter a resposta sobre o e-mail da conta de uso e executar a aceitação M1 com o titular; após autorização da proposta M2, provisionar seus pré-requisitos, publicar a imagem DDL e fixar seu digest no DML/backend. Depois implementar WP-M2-10…40, preservando a separação de segredos API/Worker e o consentimento Gemini. Nenhuma capacidade de documentos foi habilitada na plataforma nesta etapa.
+
+
+## Execução M2 em paralelo — 25/09/2026
+
+O titular confirmou que entra e faz login sem problemas e solicitou avançar ao M2 com subagentes GPT-6/Terra. Essa orientação autorizou executar a proposta de infraestrutura concreta preparada acima. Não equivale à verificação dos outros fluxos M1 ainda pendentes. Foram usadas três frentes: API/persistência e Worker/OCR em GPT-6, Angular em Terra, com integração e publicação pelo agente principal.
+
+### Infraestrutura autorizada e aplicada parcialmente
+
+- `infra-k8s` publicado em `ec06ceb`, preservando a alteração concorrente de Redis e os arquivos não rastreados. Jobs dedicados PostgreSQL/Kafka concluídos; banco `ia_trainner`, papéis sem atributos administrativos e tópicos próprios criados. Backup PostgreSQL bem-sucedido em 25/09/2026 20:14 UTC. Nenhum restart de Redis/PostgreSQL nesta execução.
+- RustFS: bucket privado `ia-trainner-documents`, identidade de aplicação própria e policy somente `documents/`; put/get/list/delete sintéticos passaram. Acesso a outro bucket e listagem anônima recusados (403). Lifecycle de multipart em 1 dia confirmado; versionamento e object lock ausentes.
+- Configurações apenas no Infisical: backend PG/S3; Worker com 17 referências/chaves próprias, sem Redis/ZITADEL/SMTP; migrador em Secret próprio. Chaves GitOps somente leitura dos repositórios SQL sincronizadas. AppProject/rede aplicados; fontes SQL da Application ainda aguardam DML publicado.
+- DDL publicado pelo [Actions 36212630319](https://github.com/DevViking-Persike/ia-trainner-sql-ddl/actions/runs/36212630319), digest `sha256:4fb05d11eb03773148e63a6a67827ed418e99e58c9f60bcce350a51aee0f1c0f`. DML habilitado com esse digest e [Actions 36212914283](https://github.com/DevViking-Persike/ia-trainner-sql-dml/actions/runs/36212914283) em execução neste checkpoint.
+- `gemini-3.8-flash` confirmado pela API com ambas as chaves e pela documentação oficial. Faturamento de `sdk-gemini-1/2` ainda pendente do titular para liberar o aviso/fluxo OCR; não afirmar plano pago. Nenhum documento pessoal enviado.
+
+### Implementação em integração (não publicada ainda)
+
+- Angular: commits `64df0b6`, `274f9d0`, 199 testes e build aprovados; documentos/coleções, consentimento, upload/progresso, polling, detalhe/download/retry/delete e shell responsivo.
+- API: fundação `f335607`, adaptadores `34b433e`; endpoints e testes reais em finalização. Uma primeira integração local PostgreSQL17/RustFS passou com as migrações canônicas; ampliar cobertura antes de publicar.
+- Worker: `cb4a318`, 9 testes sintéticos e build aprovados; outbox/inbox, extração/OCR com consentimento antes de cada chamada, retries, recuperação e exclusão. Verificação Kafka real ainda em andamento.
+- Integração backend em `codex/m2-integration`; manifests do Worker no H6 e gate de integração PostgreSQL/S3 contra DDL publicado em preparação.
+
+Próxima ação: concluir testes/integração, acompanhar publicação DML e aplicar fontes PreSync, resolver confirmação do nível Gemini, publicar backend/Angular, verificar o fluxo no domínio e persistência/isolamento/traces. M2 permanece **em andamento**; M1 publicado permanece funcionando.
+
+### Infraestrutura M2 validada no cluster
+
+DDL e DML publicados com sucesso pelos Actions `36212630319` e `36212914283`; o segundo executou integração real em PostgreSQL17/18 usando o digest DDL. DML: `sha256:d36c844a2d1550ff0e6526e04623e010f604ee37b394e2ebdd2667b8080ff653`. Application agora tem quatro fontes; sync completo executou hooks DDL e DML `Succeeded`, Argo `Synced/Healthy`. Catálogo no PostgreSQL18.4 confirmou as tabelas canônicas, V0001/V0002 bem-sucedidas e propriedade pelo migrador. Jobs próprios de bootstrap removidos após evidências. Secrets do cluster comparados em memória: referências PG/S3 expandidas e iguais, credenciais M1 ausentes do Worker, credenciais do migrador exclusivas. API/frontend M1 seguem saudáveis sem novo rollout.
+
+## Integração M2 revisada — 26/09/2026
+
+| Componente | Candidato publicado | Validação |
+|---|---|---|
+| Frontend | `6255dd8`, [PR #1 em rascunho](https://github.com/DevViking-Persike/ia-trainner-frontend-angular/pull/1) | 203 testes e build; smoke local desktop/375 px; [Actions 36213360234](https://github.com/DevViking-Persike/ia-trainner-frontend-angular/actions/runs/36213360234) CI aprovado |
+| Backend/API/Worker | `63566ca`, [PR #1 em rascunho](https://github.com/DevViking-Persike/ia-trainner-backend-dotnet/pull/1) | restore bloqueado, 9 Domain + 164 API + 18 Worker aprovados; dois gates opcionais executados separadamente abaixo; publish Worker/actionlint/kustomize aprovados; CI remoto em execução neste checkpoint |
+| Infra | `9cf60bd` em main de infra-k8s | quatro fontes Argo, hooks DDL/DML Succeeded, Synced/Healthy; banco/tópicos/bucket/Secrets e isolamento verificados |
+
+A integração adicionou casos de uso Application e testes de fronteiras da arquitetura, remoção das portas sem filtro de dono do container DI da API, validação multipart real, proteção de consentimento durante upload e cada chamada HTTP Gemini, guardas contra mensagens Kafka sem headers e correções de concorrência. O frontend cobre cursor, deep links de páginas, capacidades indisponíveis e erros 503 sem polling infinito.
+
+### Testes reais adicionais
+
+- `M2_SQL_DIR=<postgresql canônico> dotnet test -c Release`: PostgreSQL17/RustFS descartáveis, upload/extração TXT até ready, inbox persistente e ausência de novo processamento após recriar o handler, evento com dono incorreto sem marcar inbox, isolamento de lista/detalhe/página/download/retry/delete, duplicidade concorrente, exclusão do objeto e cascata real SQL, exclusão de coleção em corrida com upload. Sem envio ao Gemini nesse teste.
+- `PG_TEST_PORT=25433 KAFKA_TEST_PORT=29093 bash tests/IATrainner.Worker.Tests/run-kafka-integration.sh`: broker e PostgreSQL descartáveis, relay real, ack da outbox, consumo, duplicação, mensagem inválida e cinco falhas do handler encaminhadas à DLQ. Nesse gate de transporte o handler usa estado sintético; a durabilidade do handler é coberta pelo teste SQL/S3 anterior. Recursos próprios removidos.
+- `GEMINI_INTEGRATION=1`, apenas chaves/modelo injetados em memória pelo Infisical: SDK oficial com `gemini-3.8-flash` transcreveu PNG e PDF digitalizado sintéticos; PDF com camada textual extraído localmente. Teste aprovado (27 s). Nenhum documento pessoal, conta humana ou consentimento real de usuário criado. O gate não é executado automaticamente pelo CI.
+- Execução sem serviços externos apresenta os testes opcionais como ignorados, sem sucesso silencioso. Pipeline de publicação exige imagem DDL fixa por digest e os gates PostgreSQL/S3 e Kafka antes de publicar Zot/GitOps.
+
+### Pendência exata para publicar e verificar M2
+
+O titular ainda precisa confirmar se as duas chaves `/embedding` são pagas ou se alguma usa o nível gratuito, conforme `docs/contracts/m2/consentimento-gemini.md`. O aviso no código usa a variante conservadora; não foi apresentado em produção. Essa resposta define o texto final antes do merge/deploy. Os PRs foram deixados em rascunho e os gitlinks da composição permanecem nas versões estáveis publicadas.
+
+Após a resposta: fixar a variante correta do aviso `gemini-v1` (ainda sem aceites em produção), concluir CI/revisão, integrar backend/Angular pelo pipeline, conferir digest e Worker Ready na H6, validar upload/estado/páginas/retry/exclusão na sessão do titular e traces até o coletor. API/frontend M1 continuam nas revisões c6295d2/7bb9a8b, confirmadas por HTTPS após a aplicação da infraestrutura. M2 está **validado localmente e aguardando a confirmação do aviso para publicação**, não verificado no ambiente de uso.
