@@ -54,3 +54,5 @@ Rotas protegidas existentes (`/api/me`, `/api/platform` e as próximas) aceitam 
 | `Email__SmtpUsername`, `Email__SmtpPassword` | segredo |
 
 Sem ZITADEL ou Redis configurados, `/api/auth/*` responde `503 {"error":"auth_unavailable"}` e as rotas protegidas continuam fechadas. Sem SMTP completo (inclusive senha vazia), cadastro, reenvio e recuperação respondem `503 email_unavailable`; o login continua funcionando.
+
+Para validar o TLS do SMTP, a API também precisa consultar os endereços OCSP/CRL da cadeia Sectigo/USERTrust. A política `backend-email-certificate-validation` de `infra-k8s` permite somente esses hosts, mantendo `CheckCertificateRevocation=true`. Bloquear essas consultas causa `SslHandshakeException` antes da autenticação SMTP, mesmo com certificado válido. Não desabilitar verificação de certificado/revogação para contornar essa falha.
