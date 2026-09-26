@@ -205,3 +205,28 @@ O titular ainda precisa confirmar se as duas chaves `/embedding` são pagas ou s
 Após a resposta: fixar a variante correta do aviso `gemini-v1` (ainda sem aceites em produção), concluir CI/revisão, integrar backend/Angular pelo pipeline, conferir digest e Worker Ready na H6, validar upload/estado/páginas/retry/exclusão na sessão do titular e traces até o coletor. API/frontend M1 continuam nas revisões c6295d2/7bb9a8b, confirmadas por HTTPS após a aplicação da infraestrutura. M2 está **validado localmente e aguardando a confirmação do aviso para publicação**, não verificado no ambiente de uso.
 
 Checks finais: CI dos dois PRs aprovado; composição `7f62c10` aprovada no [Actions 36213936227](https://github.com/DevViking-Persike/ia-trainner-platform/actions/runs/36213936227). Publicação dos componentes foi corretamente ignorada em pull_request. Os worktrees dos candidatos estão limpos; alterações do legado e worktrees de terceiros permanecem preservados. O túnel SSH temporário do teste S3 foi encerrado.
+
+## Frontend de testes e chat local — 26/09/2026
+
+Pedido do titular: disponibilizar frontend para testar funcionalidades reais e conferir exposição de segredos nos repositórios. Também foi perguntado se todo o Svelte já havia sido migrado. A migração permanece parcial: as telas antigas combinam IPC do Tauri e repositórios simulados; não representam uma API web funcional equivalente. O inventário e as limitações atuais estão em [chat-lab](chat-lab.md).
+
+### Publicado e verificado no ambiente
+
+- Frontend `cb3eb6997a73ad03d7ff869f05f294bf40db10b1`, [PR #1 integrado](https://github.com/DevViking-Persike/ia-trainner-frontend-angular/pull/1), [Actions 36218844834](https://github.com/DevViking-Persike/ia-trainner-frontend-angular/actions/runs/36218844834) concluído. Revisão HTTPS `prod-cb3eb6997a73ad03d7ff869f05f294bf40db10b1-36218844834-1`; digest `sha256:5f02d3ca702c2be804d9e61a784b9aec7d9039243028b43aefcf7ad119c9ead4`.
+- Backend/API/Worker `c693b39c399eeb3e4449633af8c55f389bbd01e1`, [PR #1 integrado](https://github.com/DevViking-Persike/ia-trainner-backend-dotnet/pull/1), [Actions 36218776137](https://github.com/DevViking-Persike/ia-trainner-backend-dotnet/actions/runs/36218776137) concluído. Revisão HTTPS `prod-c693b39c399eeb3e4449633af8c55f389bbd01e1-36218776137-1`; digest `sha256:17681c01e40372068746ccdfdd78cb15b6014b016b0cab01371611a5ce614205`.
+- Infra `d61b821` adiciona somente a saída da API para o serviço interno Ollama na porta 11434. Configuração do chat no Infisical, sem chaves Gemini na API. Argo `Synced/Healthy`, operação `Succeeded`; frontend, API e Worker `Ready` na H6, sem reinícios. Inferência continua na P7.
+- No domínio oficial e na sessão existente do titular: painel → Testar chat → catálogo real `qwen3.5:9b` → resposta a mensagem sintética → segunda resposta mantendo contexto. Cancelamento removeu o turno pendente e um novo envio funcionou. Recarregar a rota preservou a sessão e limpou a conversa, conforme o contrato temporário. Nenhum documento pessoal foi enviado.
+- Interface conferida em desktop e 375 px, sem rolagem horizontal; abrir/fechar navegação móvel passou e o viewport foi restaurado. Acesso anônimo ao catálogo retorna 401 `application/problem+json`, sem fallback da SPA.
+- Jaeger recebeu os traces de `POST /api/chat/test` com os spans HTTP do catálogo e da geração no provedor, incluindo chamadas 200 e a chamada cancelada. O conteúdo sintético do chat não apareceu na amostra dos logs da API após a publicação.
+
+### Validação e revisão
+
+Frontend: 224 testes e build de produção aprovados. Backend: restore bloqueado, 9 Domain + 193 API + 18 Worker aprovados; dois gates externos explicitamente ignorados nessa execução padrão. A suíte API incluiu PostgreSQL/S3 reais usando o DDL canônico. O pipeline de publicação repetiu os gates PostgreSQL/S3 e Kafka com sucesso. Gitleaks passou nos commits destinados aos remotos e no bundle Angular. A revisão paralela corrigiu configuração ausente do chat, limite de resposta compatível com o próximo turno, concorrência por instância e estados de cancelamento, erro, retry e seleção de modelo no frontend.
+
+Auditoria de todos os refs publicados: principal público e componentes ativos privados sem detecções; histórico privado de infraestrutura e legados tem achados que exigem triagem/rotação conforme vigência. O relatório detalhado foi mantido fora do Git público, sem valores secretos. Esta verificação não certifica logs/artefatos antigos, imagens OCI, validade de credenciais ou históricos anteriores de visibilidade.
+
+### Limites e próxima ação
+
+O laboratório **não é o M3 completo**: sem RAG, documentos, fontes ou histórico persistente. O treinamento **não está entregue**: falta executor Kubernetes e validação da imagem Python/GPU. Gestão completa de modelos, equipes e monitoramento de servidor também permanecem fora da migração concluída.
+
+O código M2 agora está publicado, mas `Documents__Enabled=false` mantém seus endpoints e consentimento indisponíveis. A informação sobre faturamento das duas chaves Gemini continua pendente; nenhum aceite da variante provisória foi solicitado no ambiente. Após a resposta do titular, finalizar o aviso, ativar M2 pelo Infisical e validar upload/processamento/páginas/exclusão no domínio. Não registrar documentos como verificados no ambiente enquanto essa etapa não ocorrer.
