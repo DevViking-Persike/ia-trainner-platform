@@ -264,3 +264,17 @@ M4: runtime Python no [PR #1 em rascunho](https://github.com/DevViking-Persike/e
 Próxima ação dependente de informação: confirmar se ambas as chaves Gemini têm faturamento ativo; então finalizar aviso/consentimento, habilitar e verificar M2 no domínio. M3 e M4 permanecem em andamento, sem declaração de conclusão.
 
 Composição da entrega MongoDB: `d219aed`, [Actions 36223509516](https://github.com/DevViking-Persike/ia-trainner-platform/actions/runs/36223509516) aprovado. O gitlink Python continua em `68655e9`; os PRs de preparação M3/M4 não foram integrados nem implantados.
+
+## Rotas do frontend e disponibilidade do Perfil — 26/09/2026
+
+A inspeção da aba do titular encontrou o bundle anterior ainda em execução: menu “Testar chat”, “Conversas” indisponível e limite de 4.000 caracteres. A aba estava sem mensagens; recarregá-la trouxe a versão `47ae4c8`, a navegação unificada “Conversas”, o contexto 32.768 e a conversa sintética salva no MongoDB. O Painel foi aberto pela navegação e carregou normalmente.
+
+O estado dos outros itens é distinto: Documentos tem rotas/componentes publicados, mas `Documents__Enabled=false` mantém sua capacidade indisponível; Treinamentos e Modelos são itens previstos no menu e ainda não têm rotas/componentes ativos. Não habilitar esses links antes de implementar os respectivos fluxos.
+
+Foi reproduzido um defeito independente em `/app/perfil`: a resposta 503 do consentimento Gemini, causada por Documentos desativado, escondia a conta inteira. A correção `55a550f` separa o carregamento da conta e do consentimento; indisponibilidade e retry ficam restritos à seção Gemini, preservando conta, saída da sessão e link de redefinição de senha. [PR frontend #3](https://github.com/DevViking-Persike/ia-trainner-frontend-angular/pull/3).
+
+Validação: 228 testes e build aprovados; regressões de consentimento lento/503, conta acessível, saída, retry isolado, falha da conta e revogação. Gitleaks do commit e bundle sem achados. CI do [PR 36224320101](https://github.com/DevViking-Persike/ia-trainner-frontend-angular/actions/runs/36224320101) e [release 36224410315](https://github.com/DevViking-Persike/ia-trainner-frontend-angular/actions/runs/36224410315) concluídos com sucesso.
+
+Merge `9dc44b6cb4fbb8ba2e3eec0b9ae20596770779eb`; `/healthz` confirmou `prod-9dc44b6cb4fbb8ba2e3eec0b9ae20596770779eb-36224410315-1`. Argo `Synced/Healthy`, GitOps frontend `bc51e6b0906982c465ab5f25c101682e6b42c280`, pod Ready na H6 e imagem `sha256:493487de4902ae418c7a254247fe5620a5a2940cbfdd2266a1421f0c15b21c58`. Gitlink atualizado na composição.
+
+No domínio oficial, a sessão existente carregou Conta e ações do Perfil com Documentos ainda desativado. O aviso de consentimento ficou restrito à seção Gemini; repetir essa consulta manteve a conta visível. Nenhum aceite foi registrado, nenhum documento foi enviado e nenhuma função M2/M4 foi habilitada por essa correção. O estado das chaves Gemini continua pendente para finalizar o aviso e liberar Documentos.
