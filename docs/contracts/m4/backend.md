@@ -4,7 +4,7 @@ Estado: contrato de implementação; não autoriza execução na P7 nem ativaç�
 
 ## Dataset privado
 
-`POST /api/training/datasets` recebe `multipart/form-data` com `name` (1–120 caracteres) como primeira parte e `file` JSONL como segunda parte. Limite: **32 MiB**, 1–5000 linhas não vazias, até **32.768 bytes UTF-8 por linha**. Cada objeto tem exatamente `instruction` (string não vazia), `input` (string opcional; ausente equivale a `""`) e `output` (string não vazia); cada campo tem até **8192 bytes UTF-8**. Exigir UTF-8 válido, objeto JSON por linha, sem campos extras, sem BOM, sem duplicação de chaves e sem linhas em branco. A validação ocorre em streaming antes de tornar o objeto visível; falhas removem upload parcial. Hash SHA-256 é do JSONL original validado. O bucket `ia-trainner-datasets` é privado e sua chave nunca aparece na API, nos eventos nem em logs.
+`POST /api/training/datasets` recebe `multipart/form-data` com `name` (1–120 caracteres) como primeira parte e `file` JSONL como segunda parte. Limite: **32 MiB**, 1–5000 linhas não vazias, até **32.768 bytes UTF-8 por linha**. Cada objeto tem exatamente `instruction` (string não vazia), `input` (string opcional; ausente equivale a `""`) e `output` (string não vazia); cada campo tem até **8192 bytes UTF-8**. Exigir UTF-8 válido, objeto JSON por linha, sem campos extras, sem BOM, sem duplicação de chaves e sem linhas em branco. A validação ocorre em streaming antes de tornar o objeto visível; falhas removem upload parcial. Hash SHA-256 é do JSONL original validado. O prefixo `data/` do bucket `ia-trainner` é privado e sua chave nunca aparece na API, nos eventos nem em logs.
 
 Resposta `201` com `Location: /api/training/datasets/{id}` e `DatasetSummary`:
 
@@ -44,7 +44,7 @@ Todos os treinos **e avaliações** são `training_jobs` com `kind=training|eval
 
 ## Versão do modelo e avaliação real
 
-Um treino bem-sucedido só cria `ModelVersion` após verificar no bucket privado `ia-trainner-artifacts` a identidade do resultado (`operation`, `executionId`, status), a chave, o hash SHA-256, o tamanho e o formato `peft-lora` do artefato, e métricas finitas. Modelo base, dataset e configuração vêm do trabalho persistido no PostgreSQL e do manifesto construído pelo Worker; o resultado Python não os repete. `GET /api/training/model-versions` retorna `{ "items": [ModelVersionSummary], "nextCursor": string|null }` com o mesmo `limit`/`cursor`; `GET /api/training/model-versions/{id}` inclui linhagem e métricas. DTO:
+Um treino bem-sucedido só cria `ModelVersion` após verificar no prefixo `art/` do bucket privado `ia-trainner` a identidade do resultado (`operation`, `executionId`, status), a chave, o hash SHA-256, o tamanho e o formato `peft-lora` do artefato, e métricas finitas. Modelo base, dataset e configuração vêm do trabalho persistido no PostgreSQL e do manifesto construído pelo Worker; o resultado Python não os repete. `GET /api/training/model-versions` retorna `{ "items": [ModelVersionSummary], "nextCursor": string|null }` com o mesmo `limit`/`cursor`; `GET /api/training/model-versions/{id}` inclui linhagem e métricas. DTO:
 
 ```json
 {"id":"uuid","jobId":"uuid","datasetId":"uuid","baseModel":"Qwen/Qwen2.5-0.5B-Instruct","adapterFormat":"peft-lora","status":"ready","artifactSha256":"64 hex","artifactSizeBytes":1234,"metrics":{"trainLoss":1.23},"createdAt":"...Z","selectedAt":null}
@@ -79,7 +79,7 @@ Erros seguem `application/problem+json` com `code` estável e `traceId`, sem con
 
 ## Manifest e resultado Python v1
 
-Worker entrega **um único** `FINETUNING_JOB_MANIFEST` JSON por Job, não secreto, construído apenas de dados persistidos e configuração de catálogo. Chaves seguem prefixo determinístico: dataset `datasets/{ownerHash16}/{datasetId}/original.jsonl` no bucket datasets; execução `executions/{executionId}/` no bucket artifacts; avaliação `executions/{executionId}/request.json`, resultado `executions/{executionId}/result.json`, adapter de treino `executions/{executionId}/adapter.tar.gz`. `ownerHash16` é prefixo SHA-256 do `owner_sub` em hex minúsculo, como no M2. `executionId` é UUID estável da tentativa ou avaliação; retry cria novo ID. Referências S3 no manifest são nomes de objetos, nunca credenciais ou URLs.
+Worker entrega **um único** `FINETUNING_JOB_MANIFEST` JSON por Job, não secreto, construído apenas de dados persistidos e configuração de catálogo. Chaves **lógicas** seguem prefixo determinístico: dataset `datasets/{ownerHash16}/{datasetId}/original.jsonl` (mapeado fisicamente para `ia-trainner/data/`); execução `executions/{executionId}/` (mapeado fisicamente para `ia-trainner/art/`); avaliação `executions/{executionId}/request.json`, resultado `executions/{executionId}/result.json`, adapter de treino `executions/{executionId}/adapter.tar.gz`. `ownerHash16` é prefixo SHA-256 do `owner_sub` em hex minúsculo, como no M2. `executionId` é UUID estável da tentativa ou avaliação; retry cria novo ID. Referências S3 no manifest são nomes de objetos, nunca credenciais ou URLs.
 
 Treino:
 

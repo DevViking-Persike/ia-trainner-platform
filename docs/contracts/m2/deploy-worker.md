@@ -63,7 +63,7 @@ spec:
 | PostgreSQL | banco `ia_trainner`, papéis e schema pelo SQL de [preparação](banco-de-dados.md#preparação-do-servidor), e escopos do Infisical |
 | Infisical | pasta `/ia-trainner/worker` e InfisicalSecret `ia-trainner-worker`, no padrão do `ia-trainner-backend` (`recursive: false`), com as chaves de [configuracao](configuracao.md) |
 | Kafka | tópicos `ia-trainner.documents.v1` e `ia-trainner.documents.dlq.v1` criados antes do Worker; Kafka UI só leitura recomendado ([eventos-kafka](eventos-kafka.md#confiança)) |
-| RustFS | bucket `ia-trainner-documents` e chave de aplicação ([armazenamento-s3](armazenamento-s3.md)) |
+| RustFS | bucket `ia-trainner`, prefixo `doc/` e chave de aplicação ([armazenamento-s3](armazenamento-s3.md)) |
 | Saída do Worker | PostgreSQL 5432, Kafka 9092, RustFS, `generativelanguage.googleapis.com:443`, coletor OTLP existente e DNS; nada além |
 | Saída da API | acrescenta PostgreSQL 5432 e RustFS às regras do M1 (Redis, SMTP, ZITADEL, OTLP) |
 | Entrada do Worker | só as sondas do kubelet |

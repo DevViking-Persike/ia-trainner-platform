@@ -21,8 +21,9 @@ O M2 acrescenta:
 | `S3__ServiceUrl` | pública | API, Worker | URL interna do RustFS, definida pelo `infra-k8s` |
 | `S3__Region` | pública | API, Worker | `us-east-1` (exigida pela assinatura SigV4; o RustFS não a usa) |
 | `S3__ForcePathStyle` | pública | API, Worker | `true` |
-| `S3__AccessKey`, `S3__SecretKey` | segredo | API, Worker | chave de aplicação restrita aos buckets da IA Trainner |
-| `S3__Buckets__Documents` | pública | API, Worker | `ia-trainner-documents` |
+| `S3__AccessKey`, `S3__SecretKey` | segredo | API, Worker | chave de aplicação restrita aos prefixos `doc/`, `data/`, `art/` |
+| `S3__Buckets__Documents`, `S3__Buckets__Datasets`, `S3__Buckets__Artifacts` | pública | API, Worker | `ia-trainner` |
+| `S3__Prefixes__Documents`, `S3__Prefixes__Datasets`, `S3__Prefixes__Artifacts` | pública | API, Worker | `doc/`, `data/`, `art/`, respectivamente |
 | `Gemini__ApiKey`, `Gemini__FallbackApiKey` | segredo | Worker | referências do Infisical a `/embedding` `sdk-gemini-1` e `sdk-gemini-2`, sem copiar valores nem renomear as originais; enquanto o faturamento não for confirmado, publicar o aviso conservador que informa possível uso do nível gratuito ([consentimento-gemini](consentimento-gemini.md#nível-da-gemini-api)) |
 | `Gemini__OcrModel` | pública | Worker | id de modelo multimodal conferido na API do Gemini antes de configurar; sem valor padrão no código |
 | `Documents__MaxUploadBytes` | pública | API | `52428800` (50 MiB) |
@@ -36,7 +37,7 @@ Regras:
 - O pool do PostgreSQL é fixado em código, não na string: no máximo 10 conexões na API e 5 no Worker, porque o servidor é compartilhado.
 - Constantes de código, não configuração: nomes de tópicos, grupo de consumo, versão atual do aviso de consentimento, intervalos das varreduras (60 s), prazos de recuperação (60 min e 15 min), limpeza de 7 dias, partes de 8 MiB e páginas lógicas de 10.000 caracteres.
 - O Worker encerra na inicialização, com erro no log sem valores, se o ambiente trouxer `Zitadel__ServiceToken`, `ConnectionStrings__Redis` ou `Email__SmtpPassword`: sinal de que recebeu o Secret da API.
-- Reservadas: M3 `ConnectionStrings__Mongo`, `Qdrant__Endpoint`, `Qdrant__ApiKey`, `Knowledge__ActiveProfileId`, `Gemini__ChatModel`; M4 `S3__Buckets__Datasets`, `S3__Buckets__Artifacts`, `Training__Namespace`, `Training__ImageConfigMap`, `Training__OllamaNamespace`, `Training__OllamaDeployment`, `Ollama__BaseUrl`. Cada uma entra só na pasta do workload que a usar.
+- Reservadas: M3 `ConnectionStrings__Mongo`, `Qdrant__Endpoint`, `Qdrant__ApiKey`, `Knowledge__ActiveProfileId`, `Gemini__ChatModel`; M4 `Training__Namespace`, `Training__ImageConfigMap`, `Training__OllamaNamespace`, `Training__OllamaDeployment`, `Ollama__BaseUrl`. Cada uma entra só na pasta do workload que a usar.
 
 ## Migrações: `/ia-trainner/sql-ddl`
 
